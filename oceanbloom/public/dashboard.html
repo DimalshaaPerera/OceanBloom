@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OceanBloom - Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%90%A0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="siteHeader" class="nav"></header>
+
+  <main>
+    <div id="banner" class="banner" hidden></div>
+    <h2 id="welcome"></h2>
+
+    <canvas id="ocean" width="900" height="420" aria-label="Your ocean at the level you have reached"></canvas>
+
+    <div class="cards">
+      <div class="card"><span class="label">Highest level</span><strong id="statLevel">-</strong></div>
+      <div class="card"><span class="label">Best score</span><strong id="statBest">0</strong></div>
+      <div class="card"><span class="label">Leaderboard rank</span><strong id="statRank">-</strong></div>
+      <div class="card"><span class="label">Games completed</span><strong id="statGames">0</strong></div>
+      <div class="card"><span class="label">Mistakes (completed games)</span><strong id="statMistakes">0</strong></div>
+    </div>
+
+    <div class="panel">
+      <h3>Your ocean is blooming</h3>
+      <div class="bar big"><div id="levelFill"></div></div>
+      <p id="levelText"></p>
+      <a class="button" href="game.html">Play now</a>
+    </div>
+
+    <div class="panel">
+      <h3>Recent completed games</h3>
+      <table id="recentTable" class="styled" hidden>
+        <thead><tr><th>When</th><th>Score</th><th>Mistakes</th></tr></thead>
+        <tbody id="recentBody"></tbody>
+      </table>
+      <p id="noGames">No completed games yet. Finish all 6 levels to see your results here.</p>
+    </div>
+
+    <div class="panel">
+      <h3>Your account</h3>
+      <p>Email: <span id="acctEmail"></span><br>Member since: <span id="acctSince"></span></p>
+    </div>
+  </main>
+
+  <script src="js/backend.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/creatures.js"></script>
+  <script src="js/ocean.js"></script>
+  <script src="js/dashboardPage.js"></script>
+</body>
+</html>

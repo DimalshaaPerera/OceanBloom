@@ -1,0 +1,14 @@
+{
+  "name": "oceanbloom",
+  "version": "3.1.0",
+  "private": true,
+  "description": "OceanBloom - ocean quiz game for CIS045-3",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node tests/game.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

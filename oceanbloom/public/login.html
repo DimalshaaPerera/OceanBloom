@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OceanBloom - Log in</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%90%A0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- the finished reef swims behind the form: a preview of what you are playing for -->
+  <canvas id="ocean" class="bgcanvas" width="900" height="420" aria-hidden="true"></canvas>
+
+  <header class="nav">
+    <a class="brand" href="login.html">OceanBloom</a>
+  </header>
+
+  <main>
+    <section class="panel auth">
+      <h2>Welcome, little fish!</h2>
+      <p>Answer ocean questions against the clock to grow your fish and turn an empty ocean into a beautiful reef.</p>
+
+      <div class="tabs">
+        <button id="tabLogin" type="button" class="tab active">Log in</button>
+        <button id="tabRegister" type="button" class="tab">Register</button>
+      </div>
+
+      <form id="loginForm" autocomplete="on">
+        <label for="loginUser">Username</label>
+        <input id="loginUser" type="text" maxlength="15" autocomplete="username" required>
+        <label for="loginPass">Password</label>
+        <input id="loginPass" type="password" autocomplete="current-password" required>
+        <div class="row"><button id="loginBtn" type="submit">Log in</button></div>
+      </form>
+
+      <form id="registerForm" autocomplete="on" hidden>
+        <label for="regUser">Username (3-15 letters, numbers or _)</label>
+        <input id="regUser" type="text" maxlength="15" autocomplete="username" required>
+        <label for="regEmail">Email (we send you a welcome message)</label>
+        <input id="regEmail" type="email" maxlength="100" autocomplete="email" required>
+        <label for="regPass">Password (at least 6 characters)</label>
+        <input id="regPass" type="password" minlength="6" autocomplete="new-password" required>
+        <div class="row"><button id="registerBtn" type="submit">Create account</button></div>
+      </form>
+
+      <p id="authMsg" class="msg" role="alert"></p>
+    </section>
+  </main>
+
+  <script src="js/backend.js"></script>
+  <script src="js/creatures.js"></script>
+  <script src="js/ocean.js"></script>
+  <script src="js/loginPage.js"></script>
+</body>
+</html>

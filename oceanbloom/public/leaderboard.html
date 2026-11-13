@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OceanBloom - Leaderboard</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%F0%9F%90%A0%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header id="siteHeader" class="nav"></header>
+
+  <main>
+    <h2>Leaderboard</h2>
+    <div class="panel">
+      <p>Top 10 players, ranked by best score (then by highest level reached).</p>
+      <table id="lbTable" class="styled" hidden>
+        <thead>
+          <tr><th>Rank</th><th>Player</th><th>Best score</th><th>Highest level</th><th>Games completed</th></tr>
+        </thead>
+        <tbody id="lbBody"></tbody>
+      </table>
+      <p id="lbEmpty" hidden>Nobody has played yet - be the first!</p>
+      <div class="row">
+        <button id="refreshBtn" type="button" class="secondary">Refresh</button>
+        <a class="button" href="game.html">Play</a>
+      </div>
+      <p id="lbInfo" class="msg"></p>
+    </div>
+  </main>
+
+  <script src="js/backend.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/leaderboardPage.js"></script>
+</body>
+</html>
