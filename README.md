@@ -64,7 +64,7 @@ Use `npm.cmd` rather than `npm` in PowerShell. This avoids the "running scripts 
 ### One-time setup
 
 ```powershell
-cd C:\xampp\htdocs\oceanbloom\oceanbloom   # the folder that contains package.json
+cd C:\xampp\htdocs\oceanbloom              # the folder that contains package.json
 npm.cmd install                            # downloads mysql2
 copy .env.example .env                     # settings file (never commit it)
 ```
