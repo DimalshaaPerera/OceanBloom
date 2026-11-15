@@ -156,6 +156,32 @@ button.small { padding: 5px 12px; font-size: 0.85rem; }
 .tab { background: rgba(255, 255, 255, 0.15); color: var(--foam); flex: 1; box-shadow: none; }
 .tab.active { background: linear-gradient(135deg, #ffb347, var(--pink)); color: #20150a; }
 
+/* form checks: hints, errors, password checklist and strength bar, code box */
+.step { margin: 8px 0 0; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #8fd0ff; }
+.hint { display: block; margin-top: 4px; font-size: 0.85rem; opacity: 0.8; }
+.field-error { display: block; min-height: 0; margin-top: 4px; font-size: 0.85rem; font-weight: 600; color: var(--bad); }
+.field-error:empty { display: none; }
+input.invalid { border-color: var(--bad); }
+input.invalid:focus { box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.3); }
+
+.password-box { display: flex; gap: 8px; align-items: center; }
+.password-box input { flex: 1; min-width: 0; }
+.toggle-pass {
+  flex: none; padding: 8px 12px; font-size: 0.85rem; box-shadow: none;
+  background: rgba(255, 255, 255, 0.18); color: var(--foam);
+}
+
+.strength { height: 6px; margin-top: 8px; border-radius: 3px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
+.strength span { display: block; height: 100%; width: 0; transition: width 0.25s, background-color 0.25s; }
+.strength span.weak { background: var(--bad); }
+.strength span.medium { background: #ffd166; }
+.strength span.strong { background: var(--ok); }
+
+.rules { list-style: none; padding: 0; margin: 8px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 2px 12px; font-size: 0.85rem; opacity: 0.85; }
+.rules li.ok { color: #7cf29a; opacity: 1; }
+
+input.otp { font-size: 1.6rem; letter-spacing: 0.5em; text-align: center; font-variant-numeric: tabular-nums; }
+
 /* the animated ocean picture */
 canvas {
   width: 100%;
@@ -298,7 +324,249 @@ table.styled tbody tr:nth-child(2) td:first-child { color: #d9e2ec; font-weight:
 table.styled tbody tr:nth-child(3) td:first-child { color: #e9a36b; font-weight: 800; }
 table.styled tr.me { background: rgba(255, 159, 67, 0.3); font-weight: 600; }
 
+/* ===================== extra graphics ===================== */
+
+/* light rays slowly sweeping across the whole page, behind everything */
+body::after {
+  content: '';
+  position: fixed;
+  inset: -20% -10%;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(105deg,
+    rgba(255, 255, 255, 0) 0 120px,
+    rgba(255, 255, 255, 0.045) 160px 200px,
+    rgba(255, 255, 255, 0) 260px 380px);
+  animation: rays 18s ease-in-out infinite alternate;
+}
+@keyframes rays {
+  from { transform: translateX(-6%) skewX(-4deg); }
+  to   { transform: translateX(6%) skewX(4deg); }
+}
+
+/* the logo shimmers and bobs like it floats */
+.brand {
+  background-size: 200% auto;
+  animation: shimmer 6s linear infinite, bob 4s ease-in-out infinite;
+}
+@keyframes shimmer { to { background-position: 200% center; } }
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* a thin wave line under the navigation bar */
+.nav { position: relative; }
+.nav::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -6px;
+  height: 8px;
+  pointer-events: none;
+  background: radial-gradient(circle at 10px -2px, transparent 8px, rgba(107, 233, 255, 0.35) 9px, transparent 10px) repeat-x;
+  background-size: 20px 8px;
+  animation: wave 3s linear infinite;
+}
+@keyframes wave { to { background-position: 20px 0; } }
+
+/* panels: a soft light edge that moves around */
+.panel { position: relative; overflow: hidden; }
+.panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, 0.07) 45%, transparent 60%);
+  background-size: 300% 100%;
+  animation: sheen 9s ease-in-out infinite;
+}
+@keyframes sheen {
+  0% { background-position: 150% 0; }
+  100% { background-position: -150% 0; }
+}
+
+/* buttons: a shine sweeps across when you hover */
+button, a.button { position: relative; overflow: hidden; }
+button::after, a.button::after {
+  content: '';
+  position: absolute;
+  top: 0; bottom: 0; left: -60%;
+  width: 40%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  transition: left 0s;
+}
+button:hover:not(:disabled)::after, a.button:hover::after { left: 130%; transition: left 0.6s ease; }
+
+/* the canvas gets a gentle glowing frame */
+#gamePanel canvas, main > canvas {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(107, 233, 255, 0.25), 0 0 40px rgba(107, 233, 255, 0.18);
+}
+
+/* HUD: score jumps when it changes */
+#hudScore { display: inline-block; }
+#hudScore.bump { animation: scorebump 0.6s ease; color: #ffd166; }
+@keyframes scorebump {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.5) rotate(-6deg); text-shadow: 0 0 12px #ffd166; }
+  100% { transform: scale(1); }
+}
+#progressFill { position: relative; box-shadow: 0 0 12px rgba(255, 107, 157, 0.7); }
+
+/* countdown bar: moving stripes and a glow */
+#timerFill {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.18) 0 10px, transparent 10px 20px),
+    linear-gradient(90deg, #2ecc71, #b8e04a);
+  background-size: 28px 28px, 100% 100%;
+  animation: stripes 1s linear infinite;
+  box-shadow: 0 0 10px rgba(124, 242, 154, 0.6);
+  transition: width 0.1s linear;
+}
+@keyframes stripes { to { background-position: 28px 0, 0 0; } }
+.timerRow.low #timerFill {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.2) 0 10px, transparent 10px 20px),
+    linear-gradient(90deg, #ff6b6b, #ff3d5a);
+  box-shadow: 0 0 14px rgba(255, 61, 90, 0.9);
+  animation: stripes 0.4s linear infinite, hurry 0.5s ease-in-out infinite alternate;
+}
+.timerRow.low #timerText { animation: hurry 0.5s ease-in-out infinite alternate, shake 0.3s linear infinite; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+/* the picked answer turns red and shakes if it was wrong */
+button.choice.picked:not(.right) {
+  background: linear-gradient(135deg, #ff8a8a, #ff4d6d);
+  opacity: 1;
+  animation: wrongshake 0.45s ease;
+}
+@keyframes wrongshake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+button.choice.right { box-shadow: 0 0 0 3px #fff, 0 0 20px rgba(124, 242, 154, 0.9); }
+
+/* end screen: a big bouncing trophy above the title */
+#endPanel { text-align: center; }
+#endPanel .row { justify-content: center; }
+#endTitle::before {
+  content: '\1F3C6';
+  display: block;
+  font-size: 4rem;
+  margin-bottom: 8px;
+  animation: trophy 1.6s ease-in-out infinite;
+  filter: drop-shadow(0 0 16px rgba(255, 209, 102, 0.8));
+}
+@keyframes trophy {
+  0%, 100% { transform: translateY(0) rotate(-6deg); }
+  50% { transform: translateY(-10px) rotate(6deg); }
+}
+
+/* dashboard cards: a big faded icon in the corner */
+.card { position: relative; overflow: hidden; }
+.card::after {
+  position: absolute;
+  right: 8px; bottom: -6px;
+  font-size: 2.6rem;
+  opacity: 0.18;
+  pointer-events: none;
+}
+.card:nth-child(1)::after { content: '\1F30A'; }
+.card:nth-child(2)::after { content: '\2B50'; }
+.card:nth-child(3)::after { content: '\1F3C5'; }
+.card:nth-child(4)::after { content: '\1F420'; }
+.card:nth-child(5)::after { content: '\1F4A7'; }
+
+/* leaderboard: medals for the top three, rows slide in one after another */
+table.styled tbody tr:nth-child(1) td:first-child::before { content: '\1F947  '; }
+table.styled tbody tr:nth-child(2) td:first-child::before { content: '\1F948  '; }
+table.styled tbody tr:nth-child(3) td:first-child::before { content: '\1F949  '; }
+table.styled tbody tr { animation: slidein 0.45s ease both; }
+table.styled tbody tr:nth-child(2) { animation-delay: 0.05s; }
+table.styled tbody tr:nth-child(3) { animation-delay: 0.1s; }
+table.styled tbody tr:nth-child(4) { animation-delay: 0.15s; }
+table.styled tbody tr:nth-child(5) { animation-delay: 0.2s; }
+table.styled tbody tr:nth-child(n+6) { animation-delay: 0.25s; }
+@keyframes slidein {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* sound on/off buttons, fixed in the bottom-right corner */
+.sound-toggles {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 50;
+  display: flex;
+  gap: 8px;
+}
+button.sound-toggle {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  background: rgba(8, 35, 70, 0.75);
+  border: 2px solid rgba(107, 233, 255, 0.6);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35), 0 0 12px rgba(107, 233, 255, 0.35);
+  backdrop-filter: blur(6px);
+}
+button.sound-toggle.off { opacity: 0.55; filter: grayscale(1); border-color: rgba(255, 255, 255, 0.3); box-shadow: none; }
+button.sound-toggle.off::before {
+  content: '';
+  position: absolute;
+  left: 8px; right: 8px; top: 50%;
+  height: 3px;
+  background: #ff6b6b;
+  transform: rotate(-45deg);
+}
+
 /* people who prefer less movement get a calm, still page */
 @media (prefers-reduced-motion: reduce) {
-  body, body::before, .panel, .card, .question, button.choice, #puzzle, .msg, .banner { animation: none !important; }
+  body, body::before, body::after, .brand, .nav::after, .panel, .panel::before, .card, .question, button.choice,
+  #puzzle, .msg, .banner, #hudScore.bump, #timerFill, #timerText, #endTitle::before, table.styled tbody tr, .pause-overlay {
+    animation: none !important;
+  }
 }
+
+/* ---------- pause ---------- */
+#hud .pause-btn { min-width: 6.5em; }
+#hud .pause-btn[aria-pressed="true"] { background: linear-gradient(135deg, #ffb347, var(--pink)); color: #20150a; }
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 18px;
+  text-align: center;
+  background: linear-gradient(160deg, rgba(11, 42, 64, 0.97), rgba(18, 80, 125, 0.97));
+  border-radius: inherit;
+  animation: pop 0.25s ease both;
+}
+.pause-overlay[hidden] { display: none; }
+.pause-overlay h2 { margin: 0; font-size: 1.6rem; letter-spacing: 0.04em; }
+.pause-overlay p { margin: 0; max-width: 34em; }
+.pause-overlay small { opacity: 0.8; }
+.pause-overlay kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.85em;
+}
+#questionBox.is-paused { min-height: 210px; }
+#questionBox.is-paused > :not(.pause-overlay) { visibility: hidden; }   /* the question cannot be read while paused */

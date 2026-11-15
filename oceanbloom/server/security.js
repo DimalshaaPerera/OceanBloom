@@ -4,30 +4,27 @@
  *  1. PASSWORDS  - never stored. We store a random SALT and the SCRYPT hash of the
  *                  password. scrypt is deliberately slow, which makes guessing
  *                  passwords expensive for an attacker.
- *  2. SESSIONS   - after login the server creates a long random TOKEN and keeps it
- *                  in memory. The browser holds the token in a COOKIE.
+ *  2. SESSIONS   - after login the server creates a long random TOKEN. The browser
+ *                  holds the token in a COOKIE; the database "sessions" table keeps
+ *                  only a SHA-256 HASH of it, so a stolen copy of the table cannot
+ *                  be used to log in. Sessions survive a server restart.
  *  3. COOKIE     - HttpOnly (JavaScript on the page cannot read it, which limits
  *                  the damage of XSS) and SameSite=Strict (the browser will not send
  *                  it from other websites, which blocks most CSRF attacks).
  *                  A production site on HTTPS would also add the "Secure" flag.
- *  4. LOCK-OUT   - after 5 wrong passwords the login is blocked for 30 seconds.
- *
- * Compared with my first version (everything in the browser) this is much safer,
- * because users, hashes and sessions are on the server where visitors cannot see
- * or change them.
+ *  4. LOCK-OUT   - after 5 wrong passwords (same IP + username) the login is
+ *                  blocked for 30 seconds ("login_attempts" table).
  *
  * Code origin: generated with Claude (Anthropic), then read, tested and adapted by
  * me. (Student: edit to reflect your own changes.)
  */
 const crypto = require('crypto');
+const db = require('./db');
 
 const COOKIE_NAME = 'oceanbloom_session';
 const SESSION_SECONDS = 2 * 60 * 60;
 const MAX_FAILED = 5;
 const LOCK_SECONDS = 30;
-
-const sessions = new Map();   // token -> { username, expires }
-const failures = new Map();   // "ip|username" -> { count, lockedUntil }
 
 /* ---------- passwords ---------- */
 
@@ -45,25 +42,30 @@ function verifyPassword(password, salt, expectedHash) {
 
 /* ---------- sessions and cookies ---------- */
 
-function createSession(username) {
+function hashToken(token) {
+  return crypto.createHash('sha256').update(String(token)).digest('hex');
+}
+
+// Returns the token for the cookie. Only its hash goes into the database.
+async function createSession(userId, ip, userAgent) {
   const token = crypto.randomBytes(32).toString('hex');
-  sessions.set(token, { username: username, expires: Date.now() + SESSION_SECONDS * 1000 });
+  await db.query(
+    'INSERT INTO sessions (token_hash, user_id, ip_address, user_agent, expires_at) ' +
+    'VALUES (?, ?, ?, ?, UTC_TIMESTAMP() + INTERVAL ? SECOND)',
+    [hashToken(token), userId, ip || null, userAgent ? String(userAgent).slice(0, 255) : null, SESSION_SECONDS]);
   return token;
 }
 
-function getSession(token) {
-  if (!token) { return null; }
-  const session = sessions.get(token);
-  if (!session) { return null; }
-  if (session.expires < Date.now()) {
-    sessions.delete(token);
-    return null;
-  }
-  return session.username;
+// Returns the user id for a valid, unexpired token, otherwise null.
+async function getSession(token) {
+  if (!token || !/^[0-9a-f]{64}$/.test(token)) { return null; }
+  const rows = await db.query(
+    'SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > UTC_TIMESTAMP()', [hashToken(token)]);
+  return rows.length ? rows[0].user_id : null;
 }
 
-function destroySession(token) {
-  sessions.delete(token);
+async function destroySession(token) {
+  if (token) { await db.query('DELETE FROM sessions WHERE token_hash = ?', [hashToken(token)]); }
 }
 
 function readCookie(req, name) {
@@ -93,27 +95,38 @@ function clearedCookie() {
 
 /* ---------- brute-force protection ---------- */
 
-function lockSecondsLeft(key) {
-  const f = failures.get(key);
-  return f && f.lockedUntil > Date.now() ? Math.ceil((f.lockedUntil - Date.now()) / 1000) : 0;
+async function lockSecondsLeft(ip, username) {
+  const rows = await db.query(
+    'SELECT TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), locked_until) AS wait FROM login_attempts ' +
+    'WHERE ip_address = ? AND username = ? AND locked_until > UTC_TIMESTAMP()',
+    [ip, String(username).toLowerCase()]);
+  return rows.length ? Math.max(1, Number(rows[0].wait)) : 0;
 }
 
-function recordFailure(key) {
-  const f = failures.get(key) || { count: 0, lockedUntil: 0 };
-  f.count++;
-  if (f.count >= MAX_FAILED) {
-    f.count = 0;
-    f.lockedUntil = Date.now() + LOCK_SECONDS * 1000;
-  }
-  failures.set(key, f);
+// Count one wrong password; the 5th one in a row locks the login for 30 seconds.
+async function recordFailure(ip, username) {
+  await db.query(
+    'INSERT INTO login_attempts (ip_address, username, failed_count, locked_until) VALUES (?, ?, 1, NULL) ' +
+    'ON DUPLICATE KEY UPDATE ' +
+    '  locked_until = IF(failed_count + 1 >= ?, UTC_TIMESTAMP() + INTERVAL ? SECOND, locked_until), ' +
+    '  failed_count = IF(failed_count + 1 >= ?, 0, failed_count + 1)',
+    [ip, String(username).toLowerCase(), MAX_FAILED, LOCK_SECONDS, MAX_FAILED]);
 }
 
-function clearFailures(key) {
-  failures.delete(key);
+async function clearFailures(ip, username) {
+  await db.query('DELETE FROM login_attempts WHERE ip_address = ? AND username = ?', [ip, String(username).toLowerCase()]);
+}
+
+/* ---------- tidying up ---------- */
+
+// Removes expired sessions and old lock-outs. The server calls this every 10 minutes.
+async function cleanUp() {
+  await db.query('DELETE FROM sessions WHERE expires_at < UTC_TIMESTAMP()');
+  await db.query('DELETE FROM login_attempts WHERE last_attempt < UTC_TIMESTAMP() - INTERVAL 1 DAY');
 }
 
 module.exports = {
   COOKIE_NAME, hashPassword, verifyPassword,
   createSession, getSession, destroySession, readCookie, sessionCookie, clearedCookie,
-  lockSecondsLeft, recordFailure, clearFailures
+  lockSecondsLeft, recordFailure, clearFailures, cleanUp
 };

@@ -114,5 +114,29 @@ const bank = load(['questions.js'], ['QuestionBank']).QuestionBank;
   })());
 });
 
+/* ---------------- credential rules (validation.js, used by page AND server) ---------------- */
+
+const V = load(['validation.js'], ['Validation']).Validation;
+check('strong password is accepted', V.checkPassword('Coral#Reef42', 'nemo') === '');
+check('short password is rejected', V.checkPassword('Ab1!', 'nemo') !== '');
+check('password without uppercase is rejected', V.checkPassword('coral#reef42', 'nemo') !== '');
+check('password without lowercase is rejected', V.checkPassword('CORAL#REEF42', 'nemo') !== '');
+check('password without a number is rejected', V.checkPassword('Coral#Reef', 'nemo') !== '');
+check('password without a symbol is rejected', V.checkPassword('CoralReef42', 'nemo') !== '');
+check('password with a space is rejected', V.checkPassword('Coral Reef#42', 'nemo') !== '');
+check('password containing the username is rejected', V.checkPassword('Nemo#Reef42', 'nemo') !== '');
+check('common password "Password@123" is rejected', V.checkPassword('Password@123', 'nemo') !== '');
+check('password longer than 64 characters is rejected', V.checkPassword('Aa1!' + 'x'.repeat(61), 'nemo') !== '');
+check('confirm password must match', V.checkConfirm('Coral#Reef42', 'Coral#Reef43') !== '' &&
+  V.checkConfirm('Coral#Reef42', 'Coral#Reef42') === '');
+check('username rules: 3-15 letters, numbers or _', V.checkUsername('nemo_42') === '' &&
+  V.checkUsername('ab') !== '' && V.checkUsername('bad name') !== '' && V.checkUsername('a'.repeat(16)) !== '');
+check('email rules', V.checkEmail('player@example.com') === '' && V.checkEmail('player@example') !== '' &&
+  V.checkEmail('player example.com') !== '' && V.checkEmail('') !== '');
+check('OTP must be exactly 6 digits', V.checkOtp('012345') === '' && V.checkOtp('12345') !== '' &&
+  V.checkOtp('12345a') !== '' && V.checkOtp('1234567') !== '');
+check('login needs a username and a password', V.checkLogin('', '').username !== '' &&
+  V.checkLogin('nemo', '').password !== '' && V.checkLogin('nemo', 'x').password === '');
+
 console.log(failed === 0 ? '\nAll checks passed.' : '\n' + failed + ' check(s) FAILED.');
 process.exit(failed === 0 ? 0 : 1);

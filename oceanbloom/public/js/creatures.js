@@ -320,6 +320,334 @@ const Draw = {
     ctx.restore();
   },
 
+  /* ----- shark (faces right). Used for the "shark attack" feeding-time question ----- */
+  shark(ctx, x, y, size, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    const wag = Math.sin(t * 5) * 0.22;
+
+    const body = ctx.createLinearGradient(0, -30, 0, 30);
+    body.addColorStop(0, '#5b7186');
+    body.addColorStop(0.55, '#8197ab');
+    body.addColorStop(0.56, '#e8eef3');
+    body.addColorStop(1, '#cfd9e2');
+
+    // tail
+    ctx.save();
+    ctx.translate(-70, 0);
+    ctx.rotate(wag);
+    ctx.fillStyle = '#5b7186';
+    ctx.beginPath();
+    ctx.moveTo(6, 0);
+    ctx.lineTo(-30, -38);
+    ctx.lineTo(-18, 0);
+    ctx.lineTo(-28, 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // dorsal and pectoral fins
+    ctx.fillStyle = '#5b7186';
+    ctx.beginPath();
+    ctx.moveTo(-14, -20);
+    ctx.lineTo(4, -52);
+    ctx.lineTo(18, -18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(10, 12);
+    ctx.lineTo(-10, 40);
+    ctx.lineTo(28, 16);
+    ctx.closePath();
+    ctx.fill();
+
+    // body (a long torpedo)
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(78, 2);
+    ctx.quadraticCurveTo(60, -26, 0, -24);
+    ctx.quadraticCurveTo(-50, -20, -72, 0);
+    ctx.quadraticCurveTo(-50, 18, 0, 20);
+    ctx.quadraticCurveTo(56, 22, 78, 2);
+    ctx.fill();
+
+    // gills, eye and a toothy grin
+    ctx.strokeStyle = 'rgba(40,55,70,0.5)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(30 - i * 6, -8);
+      ctx.quadraticCurveTo(26 - i * 6, 0, 30 - i * 6, 8);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(54, -7, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(55, -8, 1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#2b3a48';
+    ctx.beginPath();
+    ctx.moveTo(44, 9);
+    ctx.quadraticCurveTo(60, 14, 72, 6);
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(48 + i * 5, 10 + i * 0.3);
+      ctx.lineTo(50 + i * 5, 14);
+      ctx.lineTo(52 + i * 5, 10 + i * 0.1);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
+  /* ----- crab that scuttles sideways on the sand ----- */
+  crab(ctx, x, y, size, t, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    color = color || '#ff5e3a';
+    const step = Math.sin(t * 12);
+
+    // legs (they move in two alternating groups)
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    for (let side = -1; side <= 1; side += 2) {
+      for (let i = 0; i < 3; i++) {
+        const lift = (i % 2 === 0 ? step : -step) * 3;
+        ctx.beginPath();
+        ctx.moveTo(side * 10, 2 + i * 3);
+        ctx.lineTo(side * 20, -2 + i * 4 + lift);
+        ctx.lineTo(side * 25, 10 + i * 2);
+        ctx.stroke();
+      }
+    }
+    // claws (they snap open and shut)
+    const snap = Math.abs(Math.sin(t * 3)) * 0.5;
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.beginPath();
+      ctx.moveTo(side * 12, -6);
+      ctx.lineTo(side * 18, -16);
+      ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.save();
+      ctx.translate(side * 19, -19);
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, -Math.PI / 2 - snap, Math.PI * 1.5 - 0.6 + snap);
+      ctx.lineTo(0, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    // shell
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 16, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(-4, -4, 7, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    // eyes on stalks
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(side * 5, -9);
+      ctx.lineTo(side * 6, -17);
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(side * 6, -18, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(side * 6, -18, 1.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
+  /* ----- octopus peeking out, with curling tentacles ----- */
+  octopus(ctx, x, y, size, t, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    color = color || '#c56cf0';
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 6; i++) {
+      const a = -1.1 + i * 0.44;
+      ctx.lineWidth = 6 - i % 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.sin(a) * 12, 10);
+      let px = Math.sin(a) * 12, py = 10;
+      for (let k = 1; k <= 6; k++) {
+        px += Math.sin(a) * 5 + Math.sin(t * 2 + i + k * 0.8) * 3;
+        py += 4.5;
+        ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+    const breathe = 1 + Math.sin(t * 2) * 0.05;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(0, -6, 22 * breathe, 24 / breathe, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
+    for (let i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(-10 + i * 6, -18 + (i % 2) * 6, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // sleepy-happy eyes
+    const blink = (t % 5) > 4.85;
+    for (let side = -1; side <= 1; side += 2) {
+      if (blink) {
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(side * 8 - 4, 2);
+        ctx.lineTo(side * 8 + 4, 2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.arc(side * 8, 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(side * 8 + 1, 3, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  },
+
+  /* ----- manta ray gliding with flapping wings ----- */
+  manta(ctx, x, y, size, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    const flap = Math.sin(t * 1.6) * 14;
+    ctx.fillStyle = 'rgba(30, 60, 110, 0.55)';
+    ctx.beginPath();
+    ctx.moveTo(40, 0);
+    ctx.quadraticCurveTo(10, -10 - flap, -20, -60 - flap);
+    ctx.quadraticCurveTo(-10, -10, -30, 0);
+    ctx.quadraticCurveTo(-10, 10, -20, 60 + flap);
+    ctx.quadraticCurveTo(10, 10 + flap, 40, 0);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(30, 60, 110, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-30, 0);
+    ctx.quadraticCurveTo(-60, Math.sin(t * 3) * 8, -80, 0);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(10, 0, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  },
+
+  /* ----- sea anemone: a clump of waving glowing tentacles ----- */
+  anemone(ctx, x, y, size, t, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    ctx.lineCap = 'round';
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    for (let i = 0; i < 9; i++) {
+      const a = -0.9 + i * 0.225;
+      const sway = Math.sin(t * 2 + i * 0.6) * 0.25;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      const ex = Math.sin(a + sway) * 26;
+      const ey = -Math.cos(a + sway) * 30;
+      ctx.quadraticCurveTo(ex * 0.3, ey * 0.7, ex, ey);
+      ctx.stroke();
+      ctx.fillStyle = '#fff6fb';
+      ctx.beginPath();
+      ctx.arc(ex, ey, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, 2, 14, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  },
+
+  /* ----- a mossy rock on the sea floor ----- */
+  rock(ctx, x, y, w, h, color) {
+    ctx.save();
+    ctx.translate(x, y);
+    const g = ctx.createLinearGradient(0, -h, 0, 0);
+    g.addColorStop(0, color || '#6f7f8f');
+    g.addColorStop(1, '#3b4652');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(-w / 2, 0);
+    ctx.quadraticCurveTo(-w / 2, -h * 0.9, -w * 0.1, -h);
+    ctx.quadraticCurveTo(w * 0.35, -h * 1.05, w / 2, -h * 0.3);
+    ctx.lineTo(w / 2, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = 'rgba(80, 180, 110, 0.55)';                  // moss on top
+    ctx.beginPath();
+    ctx.ellipse(-w * 0.05, -h * 0.92, w * 0.28, h * 0.14, -0.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  },
+
+  /* ----- clam that opens to show a glowing pearl ----- */
+  clam(ctx, x, y, size, t) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(size, size);
+    const open = 0.25 + Math.max(0, Math.sin(t * 0.7)) * 0.45;
+    ctx.fillStyle = '#e7a9c9';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 20, 9, 0, 0, Math.PI);                    // bottom shell
+    ctx.fill();
+    // pearl
+    const glow = ctx.createRadialGradient(0, -3, 1, 0, -3, 14);
+    glow.addColorStop(0, 'rgba(255,255,255,' + (0.5 + open * 0.5) + ')');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(-16, -18, 32, 30);
+    ctx.fillStyle = '#fdf7ff';
+    ctx.beginPath();
+    ctx.arc(0, -3, 5, 0, Math.PI * 2);
+    ctx.fill();
+    // top shell, hinged at the back
+    ctx.save();
+    ctx.translate(-18, 0);
+    ctx.rotate(-open);
+    ctx.fillStyle = '#f3bcd8';
+    ctx.beginPath();
+    ctx.ellipse(18, 0, 20, 11, 0, Math.PI, 0);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,80,120,0.5)';
+    ctx.lineWidth = 1.2;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(18 + i * 7, -10 + Math.abs(i) * 2);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ctx.restore();
+  },
+
   /* ----- treasure chest; open is 0 (closed) to 1 (wide open) ----- */
   chest(ctx, x, y, open, t) {
     ctx.save();

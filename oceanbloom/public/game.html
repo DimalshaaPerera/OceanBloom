@@ -22,6 +22,8 @@
         <div class="bar" title="Progress through this level"><div id="progressFill"></div></div>
         <div>Score: <strong id="hudScore">0</strong></div>
         <div>Mistakes: <strong id="hudMistakes">0</strong></div>
+        <button id="pauseBtn" type="button" class="secondary small pause-btn"
+                aria-pressed="false" title="Pause the game (P)">&#10074;&#10074; Pause</button>
       </div>
 
       <div id="questionBox" class="panel">
@@ -39,7 +41,7 @@
         <!-- Feeding time challenge: picture from the Fish Game web service -->
         <img id="puzzle" alt="Picture containing fish and a treasure chest - count the fish" hidden>
         <form id="answerForm" autocomplete="off" hidden>
-          <label for="answer">Shrimp needed (number of fish x shrimp each)</label>
+          <label for="answer">Fish left after the shark attack</label>
           <div class="row">
             <input id="answer" type="number" min="0" step="1" disabled>
             <button id="checkBtn" type="submit" disabled>Check answer</button>
@@ -48,6 +50,14 @@
 
         <p id="feedback" class="msg" role="status"></p>
         <button id="retryBtn" type="button" hidden>Try again</button>
+
+        <!-- covers the question while paused, so the clock cannot be beaten by pausing -->
+        <div id="pauseOverlay" class="pause-overlay" role="dialog" aria-labelledby="pauseTitle" hidden>
+          <h2 id="pauseTitle">Paused</h2>
+          <p>The clock is stopped and your fish is waiting. The question is hidden until you come back.</p>
+          <button id="resumeBtn" type="button">&#9654; Resume</button>
+          <small>Tip: press <kbd>P</kbd> or <kbd>Esc</kbd> to pause and resume.</small>
+        </div>
       </div>
     </section>
 
@@ -72,6 +82,7 @@
   <script src="js/game.js"></script>
   <script src="js/creatures.js"></script>
   <script src="js/ocean.js"></script>
+  <script src="js/sound.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
 </body>

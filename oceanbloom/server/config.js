@@ -38,8 +38,21 @@ module.exports = {
   BASE_URL: env.BASE_URL || 'http://localhost:' + port,
   DATA_DIR: env.DATA_DIR || path.join(__dirname, '..', 'data'),
   FISH_API_URL: env.FISH_API_URL || 'https://marcconrad.com/uob/fish/api.php?out=json',
-  // Email web API (Brevo). Leave BREVO_API_KEY empty to print emails in the terminal instead.
+  // MySQL / MariaDB (XAMPP defaults: user root, no password). The tables are made by database/oceanbloom.sql.
+  DB: {
+    host: (env.DB_HOST || '127.0.0.1').trim(),
+    port: Number(env.DB_PORT) || 3306,
+    user: (env.DB_USER || 'root').trim(),
+    password: env.DB_PASSWORD || '',
+    database: (env.DB_NAME || 'oceanbloom').trim()
+  },
+  // Email. EMAIL_PROVIDER chooses where welcome emails go:
+  //   mailpit - local test inbox (http://localhost:8025); nothing leaves your computer
+  //   brevo   - real emails through the Brevo web API (needs BREVO_API_KEY)
+  //   empty   - Brevo if BREVO_API_KEY is set, otherwise emails are printed in the terminal
   EMAIL: {
+    provider: (env.EMAIL_PROVIDER || (env.BREVO_API_KEY ? 'brevo' : '')).trim().toLowerCase(),
+    mailpitUrl: (env.MAILPIT_URL || 'http://localhost:8025').trim().replace(/\/+$/, ''),
     apiUrl: env.EMAIL_API_URL || 'https://api.brevo.com/v3/smtp/email',
     apiKey: (env.BREVO_API_KEY || '').trim(),
     fromAddress: (env.MAIL_FROM_ADDRESS || '').trim(),

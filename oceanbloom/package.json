@@ -5,10 +5,14 @@
   "description": "OceanBloom - ocean quiz game for CIS045-3",
   "scripts": {
     "start": "node server/server.js",
-    "test": "node tests/game.test.js"
+    "test": "node tests/game.test.js",
+    "mailpit": "tools\\mailpit\\mailpit.exe --listen 127.0.0.1:8025 --smtp 127.0.0.1:1025",
+    "db:import": "node database/import-json.js"
   },
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {}
+  "dependencies": {
+    "mysql2": "3.24.6"
+  }
 }

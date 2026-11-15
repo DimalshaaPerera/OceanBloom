@@ -44,8 +44,17 @@ const Backend = {
     return data;
   },
 
-  register(username, email, password) {
-    return this.request('POST', '/api/register', { username: username, email: email, password: password }, false);
+  // Registration step 1: check the details and email a 6-digit code.
+  registerStart(username, email, password, confirmPassword) {
+    return this.request('POST', '/api/register/start',
+      { username: username, email: email, password: password, confirmPassword: confirmPassword }, false);
+  },
+  registerResend(pendingId) {
+    return this.request('POST', '/api/register/resend', { pendingId: pendingId }, false);
+  },
+  // Registration step 2: check the code; the server creates the account and logs us in.
+  registerVerify(pendingId, code) {
+    return this.request('POST', '/api/register/verify', { pendingId: pendingId, code: code }, false);
   },
   login(username, password) {
     return this.request('POST', '/api/login', { username: username, password: password }, false);

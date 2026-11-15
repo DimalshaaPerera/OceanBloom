@@ -25,31 +25,82 @@
         <button id="tabRegister" type="button" class="tab">Register</button>
       </div>
 
-      <form id="loginForm" autocomplete="on">
+      <!-- LOG IN -->
+      <form id="loginForm" autocomplete="on" novalidate>
         <label for="loginUser">Username</label>
-        <input id="loginUser" type="text" maxlength="15" autocomplete="username" required>
+        <input id="loginUser" type="text" maxlength="15" autocomplete="username" aria-describedby="loginUserErr" required>
+        <small id="loginUserErr" class="field-error" aria-live="polite"></small>
+
         <label for="loginPass">Password</label>
-        <input id="loginPass" type="password" autocomplete="current-password" required>
+        <div class="password-box">
+          <input id="loginPass" type="password" maxlength="128" autocomplete="current-password" aria-describedby="loginPassErr" required>
+          <button type="button" class="toggle-pass" data-for="loginPass" aria-label="Show password">Show</button>
+        </div>
+        <small id="loginPassErr" class="field-error" aria-live="polite"></small>
+
         <div class="row"><button id="loginBtn" type="submit">Log in</button></div>
       </form>
 
-      <form id="registerForm" autocomplete="on" hidden>
-        <label for="regUser">Username (3-15 letters, numbers or _)</label>
-        <input id="regUser" type="text" maxlength="15" autocomplete="username" required>
-        <label for="regEmail">Email (we send you a welcome message)</label>
-        <input id="regEmail" type="email" maxlength="100" autocomplete="email" required>
-        <label for="regPass">Password (at least 6 characters)</label>
-        <input id="regPass" type="password" minlength="6" autocomplete="new-password" required>
-        <div class="row"><button id="registerBtn" type="submit">Create account</button></div>
+      <!-- REGISTER, STEP 1 OF 2: details -->
+      <form id="registerForm" autocomplete="on" novalidate hidden>
+        <p class="step">Step 1 of 2 - your details</p>
+
+        <label for="regUser">Username</label>
+        <input id="regUser" type="text" maxlength="15" autocomplete="username" aria-describedby="regUserHelp regUserErr" required>
+        <small id="regUserHelp" class="hint">3-15 letters, numbers or _</small>
+        <small id="regUserErr" class="field-error" aria-live="polite"></small>
+
+        <label for="regEmail">Email</label>
+        <input id="regEmail" type="email" maxlength="100" autocomplete="email" aria-describedby="regEmailHelp regEmailErr" required>
+        <small id="regEmailHelp" class="hint">We send a 6-digit code here to check it is really yours.</small>
+        <small id="regEmailErr" class="field-error" aria-live="polite"></small>
+
+        <label for="regPass">Password</label>
+        <div class="password-box">
+          <input id="regPass" type="password" maxlength="64" autocomplete="new-password" aria-describedby="pwRules regPassErr" required>
+          <button type="button" class="toggle-pass" data-for="regPass" aria-label="Show password">Show</button>
+        </div>
+        <div class="strength" aria-hidden="true"><span id="strengthBar"></span></div>
+        <ul id="pwRules" class="rules" aria-label="Password requirements"></ul>
+        <small id="regPassErr" class="field-error" aria-live="polite"></small>
+
+        <label for="regConfirm">Confirm password</label>
+        <div class="password-box">
+          <input id="regConfirm" type="password" maxlength="64" autocomplete="new-password" aria-describedby="regConfirmErr" required>
+          <button type="button" class="toggle-pass" data-for="regConfirm" aria-label="Show password">Show</button>
+        </div>
+        <small id="regConfirmErr" class="field-error" aria-live="polite"></small>
+
+        <div class="row"><button id="registerBtn" type="submit">Send verification code</button></div>
+      </form>
+
+      <!-- REGISTER, STEP 2 OF 2: the code from the email -->
+      <form id="otpForm" autocomplete="off" novalidate hidden>
+        <p class="step">Step 2 of 2 - verify your email</p>
+        <p>We sent a 6-digit code to <strong id="otpEmail"></strong>.
+          It expires in <strong id="otpExpiry">10:00</strong>.</p>
+
+        <label for="otpCode">Verification code</label>
+        <input id="otpCode" class="otp" type="text" inputmode="numeric" maxlength="6"
+               autocomplete="one-time-code" placeholder="000000" aria-describedby="otpCodeErr" required>
+        <small id="otpCodeErr" class="field-error" aria-live="polite"></small>
+
+        <div class="row">
+          <button id="otpBtn" type="submit">Verify and create account</button>
+          <button id="resendBtn" type="button" class="secondary small">Resend code</button>
+          <button id="backBtn" type="button" class="secondary small">Change details</button>
+        </div>
       </form>
 
       <p id="authMsg" class="msg" role="alert"></p>
     </section>
   </main>
 
-  <script src="js/backend.js"></script>
-  <script src="js/creatures.js"></script>
-  <script src="js/ocean.js"></script>
-  <script src="js/loginPage.js"></script>
+  <script src="js/backend.js?v=3.1.1"></script>
+  <script src="js/validation.js?v=3.1.1"></script>
+  <script src="js/creatures.js?v=3.1.1"></script>
+  <script src="js/ocean.js?v=3.1.1"></script>
+  <script src="js/sound.js?v=3.1.1"></script>
+  <script src="js/loginPage.js?v=3.1.1"></script>
 </body>
 </html>

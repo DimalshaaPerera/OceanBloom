@@ -29,19 +29,28 @@
   let spec = null;         // what the current question needs: { type, difficulty, timeLimit }
   let question = null;     // the current question: { type: 'choice' | 'fish', ... }
   let startBest = profile.stats.bestScore;   // best score before this run, to detect a new record
+  let paused = false;
+  let nextWaiting = false; // the next question was due while paused: show it on resume
 
   UI.init(bus);
   Timer.init(bus);
   Ocean.init(document.getElementById('ocean'));
+  let lastTick = -1;            // last whole second we ticked for (countdown sound)
 
   /* ---------- starting and loading questions ---------- */
 
   function startGame() {
     clearTimeout(nextTimer);
     Timer.stop();
+    paused = false;
+    nextWaiting = false;
+    Ocean.paused = false;
+    UI.setPaused(false);
     requestId++;
     game.reset();
     Ocean.setLevel(1, true);
+    Ocean.setUrgency(0);
+    Sound.setMood(1);
     UI.showFeedback('', '');
     UI.showPlaying();
     loadQuestion();
@@ -62,11 +71,14 @@
       FishApi.fetchQuestion()
         .then(function (q) {
           if (myRequest !== requestId) { return; }          // outdated, ignore
-          // The Fish Game API gives us the number of fish; OUR twist is the shrimp sum.
-          const shrimp = q.answer * spec.shrimpEach;
-          question = { type: 'fish', answer: shrimp };
-          game.setQuestion(shrimp);
-          UI.showFishQuestion(q.imageUrl, spec.shrimpEach);
+                   // OUR twist: a shark eats some fish - how many are left?
+          const eaten = Math.min(q.answer, 1 + Math.floor(Math.random() * 3));   // 1 to 3 fish
+          const left = q.answer - eaten;
+          question = { type: 'fish', answer: left };
+          game.setQuestion(left);
+          UI.showFishQuestion(q.imageUrl, eaten);
+          Ocean.sharkPass();                                 // the shark swims through the reef
+          Sound.play('shark');
         })
         .catch(function (error) {
           if (myRequest !== requestId) { return; }
@@ -78,10 +90,32 @@
   function scheduleNextQuestion(delay) {
     if (game.getState().active) {
       nextTimer = setTimeout(function () {
+        if (paused) { nextWaiting = true; return; }   // wait until the player resumes
         UI.showFeedback('', '');
         loadQuestion();
       }, delay);
     }
+  }
+
+  /* ---------- pause ---------- */
+
+  // Pausing stops the countdown, freezes the ocean and hides the question.
+  function setPaused(on) {
+    if (on === paused) { return; }
+    if (on && !game.getState().active) { return; }   // nothing to pause once the game is over
+    paused = on;
+    Ocean.paused = on;
+    if (on) {
+      Timer.pause();
+    } else {
+      Timer.resume();
+      if (nextWaiting) {
+        nextWaiting = false;
+        UI.showFeedback('', '');
+        loadQuestion();
+      }
+    }
+    UI.setPaused(on);
   }
 
   function report(s, finished) {
@@ -90,15 +124,34 @@
 
   /* ---------- events coming from the screen ---------- */
 
-  bus.on('ui:submitAnswer', function (d) { game.submit(d.value, Timer.remaining()); });
+  bus.on('ui:submitAnswer', function (d) {
+    if (paused) { return; }              // no answering while the question is hidden
+    game.submit(d.value, Timer.remaining());
+  });
   bus.on('ui:retry', loadQuestion);
   bus.on('ui:restart', startGame);
-  bus.on('ui:questionShown', function () { Timer.start(spec.timeLimit); });
+  bus.on('ui:togglePause', function () { setPaused(!paused); });
+  bus.on('ui:autoPause', function () { setPaused(true); });
+  bus.on('ui:questionShown', function () {
+    lastTick = -1;
+    Timer.start(spec.timeLimit);
+    if (paused) { Timer.pause(); return; }   // a picture finished loading while paused
+    Sound.play('question');
+  });
 
   /* ---------- events coming from the timer ---------- */
 
-  bus.on('timer:tick', function (t) { UI.updateTimer(t); });
-  bus.on('timer:expired', function () { game.timeout(); });
+  bus.on('timer:tick', function (t) {
+    UI.updateTimer(t);
+    // last 5 seconds: a tick every second and the ocean edges pulse red
+    const secs = Math.ceil(t.remaining);
+    Ocean.setUrgency(t.remaining > 0 && t.remaining <= 5 ? 1 - t.remaining / 5 * 0.6 : 0);
+    if (secs <= 5 && secs > 0 && secs !== lastTick) {
+      lastTick = secs;
+      Sound.play('tick');
+    }
+  });
+  bus.on('timer:expired', function () { Sound.play('timeout'); game.timeout(); });
 
   /* ---------- events coming from the game rules ---------- */
 
@@ -107,11 +160,13 @@
 
   bus.on('answer:submitted', function () {
     Timer.stop();
+    Ocean.setUrgency(0);
     UI.setAnswerEnabled(false);
   });
 
   bus.on('answer:correct', function () {
     UI.showFeedback('Correct! Well done.', 'ok');
+    Sound.play('correct');
     Ocean.cheer();                      // the fish jumps for joy
     scheduleNextQuestion(CORRECT_DELAY_MS);
   });
@@ -123,11 +178,14 @@
       ' - answer all ' + s.stepsPerLevel + ' questions correctly in a row to move on.', 'bad');
     if (question.type === 'choice') { UI.highlightChoice(s.correctAnswer); }
     Ocean.oops();                       // the fish shakes and the screen flashes red
+    if (s.reason !== 'time') { Sound.play('wrong'); }   // a time-out already played its own alarm
     scheduleNextQuestion(WRONG_DELAY_MS);
   });
 
   bus.on('level:up', function (s) {
     Ocean.setLevel(s.level);            // fish grows, ocean gets prettier
+    Sound.play('levelUp');
+    Sound.setMood(s.level);             // the music gets brighter too
     Ocean.banner('Level ' + s.level + ': ' + s.levelName);
     UI.showFeedback('Level ' + s.level + '! Your fish grew and the ocean is blooming.', 'ok');
     report(s, false).catch(function () { /* saving can wait until the next level */ });
@@ -135,6 +193,7 @@
 
   bus.on('game:won', function (s) {
     Ocean.celebrate();
+    Sound.play('win');
     report(s, true)
       .then(function (result) {
         const info = { best: result.bestScore, record: s.score > startBest, rank: result.rank, failed: false };

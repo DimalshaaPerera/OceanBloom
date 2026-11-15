@@ -58,4 +58,5 @@
   // The player's ocean, as far as they have got
   Ocean.init($('ocean'));
   Ocean.setLevel(Math.max(1, s.highestLevel), true);
+  Sound.setMood(Math.max(1, s.highestLevel));      // the music matches the player's reef
 })();

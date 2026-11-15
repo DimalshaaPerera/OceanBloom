@@ -12,17 +12,20 @@
  *   Ocean.cheer()             happy jump with hearts (correct answer)
  *   Ocean.oops()              little shake (wrong answer or time out)
  *   Ocean.banner(text)        big title that fades away (e.g. "Level 2: Bubble Bay")
- *   Ocean.celebrate()         confetti rain (game won)
+ *   Ocean.celebrate()         confetti rain and fireworks (game won)
+ *   Ocean.sharkPass()         a shark swims across (the "shark attack" question)
+ *   Ocean.setUrgency(0..1)    red pulsing edges when the countdown is nearly over
  *
  * What appears (everything from the lower levels stays):
- *   Level 1  small orange fish in an empty, dark ocean (it blows the odd bubble)
- *   Level 2  lighter water, sunbeams, bubbles, glowing dust, a jellyfish. Fish gets stripes.
- *   Level 3  hills, sandy floor, swaying seaweed, a sea turtle
- *   Level 4  colourful coral, starfish, a seahorse. Fish grows a big top fin.
- *   Level 5  a whale far away, a school of little fish, a second jellyfish
+ *   Level 1  small orange fish in an empty, dark ocean (drifting specks, it blows the odd bubble)
+ *   Level 2  lighter water, sunbeams, dancing light, bubbles, glowing dust, a jellyfish. Fish gets stripes.
+ *   Level 3  hills, sandy floor, rocks, swaying seaweed, a sea turtle, a crab. Fish glows softly.
+ *   Level 4  colourful coral, anemones, starfish, a seahorse, a manta ray. Fish grows a big top fin.
+ *   Level 5  a whale far away, a school of little fish, a second jellyfish, an octopus, a clam with a pearl
  *   Level 6  open treasure chest, brightest water, rainbow fish with a crown
  *
- * Move your mouse over the canvas and the fish swims towards it.
+ * Move your mouse over the canvas and the fish swims towards it. Click the water
+ * and the fish darts there in a burst of bubbles.
  *
  * Code origin: generated with Claude (Anthropic), then read, tested and adapted by
  * me. (Student: edit to reflect your own changes.)
@@ -45,9 +48,15 @@ const Ocean = {
   mouse: { x: 0, y: 0, inside: false },
 
   // things in the scene
-  bubbles: [], dust: [], jellies: [], school: [], pops: [],
+  bubbles: [], dust: [], jellies: [], school: [], pops: [], snow: [], ripples: [],
   turtle: { x: -100, y: 150 },
   whale: { x: 700, y: 70 },
+  crab: { x: 300, dir: 1, pause: 0 },
+  manta: { x: -150, y: 110 },
+  shark: { active: false, x: 0, y: 0 },
+  fireworks: 0, fireworkWait: 0,
+  urgency: 0,
+  dash: 0,                          // > 0 while the fish darts towards a click
   flash: { alpha: 0, color: '255,255,255' },
   bannerText: '', bannerT: 99,
 
@@ -56,6 +65,8 @@ const Ocean = {
   CONFETTI: ['#ff6b9d', '#ffd93d', '#6be9ff', '#7cf29a', '#a66bff', '#ff9f43'],
 
   /* ---------- starting ---------- */
+
+  paused: false,                 // true while the game is paused
 
   init(canvas) {
     this.canvas = canvas;
@@ -77,9 +88,25 @@ const Ocean = {
       self.mouse.y = y * self.H;
     });
 
+    // EVENT: click (or tap) the water - a ring of bubbles, and the fish darts there.
+    canvas.addEventListener('pointerdown', function (e) {
+      if (self.paused) { return; }
+      const box = canvas.getBoundingClientRect();
+      const x = (e.clientX - box.left) / box.width * self.W;
+      const y = (e.clientY - box.top) / box.height * self.H;
+      self.poke(x, y);
+    });
+
+    // marine snow: tiny specks drifting down at every level (makes the water feel deep)
+    this.snow = [];
+    for (let i = 0; i < 45; i++) {
+      this.snow.push({ x: Math.random() * this.W, y: Math.random() * this.H, r: 0.6 + Math.random() * 1.2, speed: 0.08 + Math.random() * 0.2, phase: Math.random() * 6 });
+    }
+
     function frame() {
-      self.update();
+      if (!self.paused) { self.update(); }   // paused: the scene stands still
       self.draw();
+      if (self.paused) { self.drawPaused(); }
       requestAnimationFrame(frame);
     }
     frame();
@@ -125,6 +152,10 @@ const Ocean = {
 
   cheer() {                      // correct answer
     this.jumpT = 0;
+    this.ripples.push({ x: this.fx, y: this.fy, r: 10 * this.scale, life: 1, color: '255,255,255' });
+    for (let i = 0; i < 10; i++) {
+      this.spawn('star', this.fx + (Math.random() - 0.5) * 100, this.fy + (Math.random() - 0.5) * 60, '#fff6a8', { vy: -0.6 - Math.random(), size: 3 + Math.random() * 4, decay: 0.025 });
+    }
     for (let i = 0; i < 6; i++) {
       this.spawn('heart', this.fx + (Math.random() - 0.5) * 80, this.fy - 20, '#ff5d8f', { vy: -1 - Math.random(), size: 7 + Math.random() * 5 });
     }
@@ -140,17 +171,41 @@ const Ocean = {
     this.bannerT = 0;
   },
 
-  celebrate() {                  // game won: confetti rain
+  celebrate() {                  // game won: confetti rain + fireworks
     for (let i = 0; i < 160; i++) {
       this.spawn('confetti', Math.random() * this.W, -10 - Math.random() * 200,
         this.CONFETTI[i % 6], { vx: (Math.random() - 0.5) * 2, vy: 1 + Math.random() * 2, gravity: 0.01, decay: 0.003 });
     }
+    this.fireworks = 10;
+    this.fireworkWait = 0;
+  },
+
+  sharkPass() {                  // the shark swims across, right behind the hero
+    const fromLeft = Math.random() < 0.5;
+    this.shark = { active: true, x: fromLeft ? -180 : this.W + 180, y: this.H * 0.4, dir: fromLeft ? 1 : -1 };
+  },
+
+  setUrgency(u) {                // 0 = calm, 1 = time is nearly up
+    this.urgency = this.clamp(u, 0, 1);
+  },
+
+  // The player clicked the water.
+  poke(x, y) {
+    this.ripples.push({ x: x, y: y, r: 4, life: 1, color: '255,255,255' });
+    for (let i = 0; i < 8; i++) {
+      this.bubbles.push({ x: x + (Math.random() - 0.5) * 30, y: y + (Math.random() - 0.5) * 20, r: 2 + Math.random() * 4, speed: 0.8 + Math.random() * 1.2, temp: true });
+    }
+    this.mouse.x = x; this.mouse.y = y; this.mouse.inside = true;
+    this.dash = 0.5;
   },
 
   /* ---------- little helpers ---------- */
 
   levelUpEffects() {
     this.flash = { alpha: 0.5, color: '255,255,255' };
+    for (let i = 0; i < 3; i++) {
+      this.ripples.push({ x: this.fx, y: this.fy, r: 10 + i * 30, life: 1 + i * 0.2, color: '255,246,168' });
+    }
     for (let i = 0; i < 60; i++) {
       this.spawn('confetti', this.fx, this.fy, this.CONFETTI[i % 6],
         { vx: (Math.random() - 0.5) * 9, vy: -2 - Math.random() * 6, gravity: 0.12, decay: 0.012 });
@@ -194,8 +249,15 @@ const Ocean = {
     tx = this.clamp(tx, marginX, this.W - marginX);
     ty = this.clamp(ty, marginY, this.H - marginY - (this.level >= 3 ? 30 : 0));
     const dx = tx - this.fx;
-    this.fx += dx * 0.03;
-    this.fy += (ty - this.fy) * 0.03;
+    const speed = this.dash > 0 ? 0.09 : 0.03;                   // darts after a click
+    this.fx += dx * speed;
+    this.fy += (ty - this.fy) * speed;
+    if (this.dash > 0) {
+      this.dash -= dt;
+      if (Math.random() < 0.5) {                                  // a trail of bubbles while darting
+        this.bubbles.push({ x: this.fx - 30 * this.scale * (this.dir >= 0 ? 1 : -1), y: this.fy, r: 1.5 + Math.random() * 2.5, speed: 0.5 + Math.random() * 0.6, temp: true });
+      }
+    }
     this.tilt = this.clamp((ty - this.fy) * 0.006, -0.35, 0.35);
     const wanted = dx > 4 ? 1 : (dx < -4 ? -1 : (this.dir >= 0 ? 1 : -1));
     this.dir += (wanted - this.dir) * 0.12;                       // the turn-around "flip"
@@ -241,6 +303,60 @@ const Ocean = {
     if (this.turtle.x > this.W + 120) { this.turtle.x = -120; }
     this.whale.x -= 0.2;
     if (this.whale.x < -160) { this.whale.x = this.W + 160; }
+    this.manta.x += 0.45;
+    if (this.manta.x > this.W + 160) { this.manta.x = -160; this.manta.y = 80 + Math.random() * 120; }
+
+    // the crab scuttles along the sand, stops for a rest, then turns around
+    const crab = this.crab;
+    if (crab.pause > 0) {
+      crab.pause -= dt;
+    } else {
+      crab.x += crab.dir * 0.8;
+      if (crab.x > this.W - 60 || crab.x < 60 || Math.random() < 0.003) {
+        crab.dir = crab.x > this.W - 60 ? -1 : (crab.x < 60 ? 1 : -crab.dir);
+        crab.pause = 1 + Math.random() * 2;
+      }
+    }
+
+    // the shark crosses the screen once, then goes away
+    if (this.shark.active) {
+      this.shark.x += this.shark.dir * 3.2;
+      if (this.shark.x > this.W + 220 || this.shark.x < -220) { this.shark.active = false; }
+    }
+
+    // ripples grow and fade
+    for (let i = this.ripples.length - 1; i >= 0; i--) {
+      const r = this.ripples[i];
+      r.r += 2.2;
+      r.life -= 0.02;
+      if (r.life <= 0) { this.ripples.splice(i, 1); }
+    }
+
+    // fireworks after winning: one burst every ~0.35 s
+    if (this.fireworks > 0) {
+      this.fireworkWait -= dt;
+      if (this.fireworkWait <= 0) {
+        this.fireworks--;
+        this.fireworkWait = 0.35;
+        const bx = 100 + Math.random() * (this.W - 200);
+        const by = 60 + Math.random() * 140;
+        const color = this.CONFETTI[Math.floor(Math.random() * 6)];
+        for (let i = 0; i < 36; i++) {
+          const a = (Math.PI * 2 * i) / 36;
+          const v = 2 + Math.random() * 2;
+          this.spawn('spark', bx, by, color, { vx: Math.cos(a) * v, vy: Math.sin(a) * v, gravity: 0.04, decay: 0.018, size: 2.5 });
+        }
+        this.ripples.push({ x: bx, y: by, r: 5, life: 0.8, color: '255,255,255' });
+      }
+    }
+
+    // marine snow drifts down slowly
+    for (let i = 0; i < this.snow.length; i++) {
+      const s = this.snow[i];
+      s.y += s.speed;
+      s.x += Math.sin(this.time * 0.6 + s.phase) * 0.15;
+      if (s.y > this.H) { s.y = -2; s.x = Math.random() * this.W; }
+    }
 
     // --- effects: confetti, hearts, stars
     for (let i = this.pops.length - 1; i >= 0; i--) {
@@ -278,11 +394,20 @@ const Ocean = {
     ctx.fillRect(0, 0, this.W, this.H);
 
     // 2. far away things
-    if (level >= 2) { this.drawRays(); this.drawSurface(); }
+    this.drawSnow();
+    if (level >= 2) { this.drawCaustics(); this.drawRays(); this.drawSurface(); }
     if (level >= 5) { Draw.whale(ctx, this.whale.x, this.whale.y, 1.3, this.time); }
+    if (level >= 4) { Draw.manta(ctx, this.manta.x, this.manta.y + Math.sin(this.time * 0.7) * 15, 0.8, this.time); }
     if (level >= 3) {
       this.drawHills('rgba(20, 60, 120, 0.35)', this.H - 110, 22, 0.012, 0);
       this.drawHills('rgba(20, 120, 140, 0.35)', this.H - 80, 16, 0.02, 2);
+    }
+    if (this.shark.active) {
+      ctx.save();
+      ctx.translate(this.shark.x, this.shark.y + Math.sin(this.time * 2) * 10);
+      ctx.scale(this.shark.dir, 1);
+      Draw.shark(ctx, 0, 0, 1.15, this.time);
+      ctx.restore();
     }
 
     // 3. swimmers in the middle
@@ -297,22 +422,134 @@ const Ocean = {
     }
 
     // 4. the sea floor
-    if (level >= 3) { this.drawSand(); this.drawSeaweed(); }
-    if (level >= 4) { this.drawCoral(); this.drawStarfish(); Draw.seahorse(ctx, this.W * 0.68, this.H - 120 + Math.sin(this.time) * 6, 1.1, '#ffb347', this.time); }
+    if (level >= 3) {
+      this.drawSand();
+      Draw.rock(ctx, 240, this.H - 36, 70, 38);
+      Draw.rock(ctx, 640, this.H - 34, 54, 28, '#7d8a78');
+      this.drawSeaweed();
+    }
+    if (level >= 5) {
+      Draw.octopus(ctx, 245, this.H - 72, 0.85, this.time, '#c56cf0');
+      Draw.clam(ctx, 420, this.H - 26, 1, this.time);
+    }
+    if (level >= 4) {
+      this.drawCoral();
+      Draw.anemone(ctx, 60, this.H - 38, 0.9, this.time, '#ff8fc8');
+      Draw.anemone(ctx, 580, this.H - 36, 0.75, this.time + 1, '#7cf2d4');
+      this.drawStarfish();
+      Draw.seahorse(ctx, this.W * 0.68, this.H - 120 + Math.sin(this.time) * 6, 1.1, '#ffb347', this.time);
+    }
+    if (level >= 3) {
+      const c = this.crab;
+      Draw.crab(ctx, c.x, this.H - 26, 0.8, c.pause > 0 ? 0 : this.time, '#ff5e3a');
+    }
     if (level >= 6) { Draw.chest(ctx, this.W - 170, this.H - 90, 0.8, this.time); }
 
-    // 5. the hero fish (in front of everything)
+    // 5. the hero fish (in front of everything), with its shadow on the sand and a soft glow
+    if (level >= 3) { this.drawShadow(); }
+    if (level >= 3) { this.drawGlow(); }
     this.drawHero();
 
     // 6. in front: dust, bubbles, confetti, flashes and the title banner
     this.drawDust();
     this.drawBubbles();
+    this.drawRipples();
     this.drawPops();
+    this.drawVignette();
     if (this.flash.alpha > 0) {
       ctx.fillStyle = 'rgba(' + this.flash.color + ',' + this.flash.alpha + ')';
       ctx.fillRect(0, 0, this.W, this.H);
     }
     this.drawBanner();
+  },
+
+  // Dancing patches of sunlight (caustics). 'lighter' adds light on top of the water.
+  drawCaustics() {
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const strength = 0.03 + this.level * 0.012;
+    for (let i = 0; i < 12; i++) {
+      const x = ((i * 137) % this.W) + Math.sin(this.time * 0.7 + i * 1.7) * 60;
+      const y = 40 + ((i * 89) % (this.H - 120)) + Math.cos(this.time * 0.5 + i) * 30;
+      const r = 50 + Math.sin(this.time * 1.3 + i) * 18;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, 'rgba(200,255,255,' + strength + ')');
+      g.addColorStop(1, 'rgba(200,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(x, y, r * 1.4, r * 0.7, Math.sin(this.time * 0.3 + i), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  },
+
+  drawSnow() {
+    const ctx = this.ctx;
+    ctx.fillStyle = 'rgba(220,240,255,0.35)';
+    for (let i = 0; i < this.snow.length; i++) {
+      const s = this.snow[i];
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+
+  // a dark oval on the sand under the fish: smaller and fainter when the fish is high up
+  drawShadow() {
+    const ctx = this.ctx;
+    const height = (this.H - 40 - this.fy) / this.H;          // 0 near the floor, ~1 at the top
+    const w = 34 * this.scale * (1 - height * 0.4);
+    ctx.fillStyle = 'rgba(40, 30, 10,' + (0.25 * (1 - height)) + ')';
+    ctx.beginPath();
+    ctx.ellipse(this.fx, this.H - 22, w, w * 0.18, 0, 0, Math.PI * 2);
+    ctx.fill();
+  },
+
+  // a soft halo around the hero fish (stronger at higher levels)
+  drawGlow() {
+    const ctx = this.ctx;
+    const r = 70 * this.scale;
+    const color = this.level >= 6 ? '255,240,160' : '255,255,255';
+    const a = 0.06 + (this.level - 3) * 0.035 + Math.sin(this.time * 2) * 0.02;
+    const g = ctx.createRadialGradient(this.fx, this.fy, 0, this.fx, this.fy, r);
+    g.addColorStop(0, 'rgba(' + color + ',' + a + ')');
+    g.addColorStop(1, 'rgba(' + color + ',0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(this.fx - r, this.fy - r, r * 2, r * 2);
+  },
+
+  drawRipples() {
+    const ctx = this.ctx;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < this.ripples.length; i++) {
+      const r = this.ripples[i];
+      ctx.strokeStyle = 'rgba(' + r.color + ',' + Math.min(1, r.life) * 0.6 + ')';
+      ctx.beginPath();
+      ctx.ellipse(r.x, r.y, r.r, r.r * 0.75, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  },
+
+  // Dark edges make the middle look lit (strong at level 1 = deep and lonely).
+  // When time is nearly up the edges pulse red.
+  drawVignette() {
+    const ctx = this.ctx;
+    const dark = 0.55 - (Math.min(this.level, 6) - 1) * 0.08;
+    const g = ctx.createRadialGradient(this.W / 2, this.H / 2, this.H * 0.35, this.W / 2, this.H / 2, this.W * 0.65);
+    g.addColorStop(0, 'rgba(0,10,25,0)');
+    g.addColorStop(1, 'rgba(0,10,25,' + dark + ')');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, this.W, this.H);
+
+    if (this.urgency > 0) {
+      const pulse = 0.5 + Math.sin(this.time * 10) * 0.5;
+      const red = ctx.createRadialGradient(this.W / 2, this.H / 2, this.H * 0.3, this.W / 2, this.H / 2, this.W * 0.6);
+      red.addColorStop(0, 'rgba(255,40,60,0)');
+      red.addColorStop(1, 'rgba(255,40,60,' + (0.15 + pulse * 0.3) * this.urgency + ')');
+      ctx.fillStyle = red;
+      ctx.fillRect(0, 0, this.W, this.H);
+    }
   },
 
   drawHero() {
@@ -463,15 +700,21 @@ const Ocean = {
 
   drawBubbles() {
     const ctx = this.ctx;
-    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.lineWidth = 1.5;
     for (let i = 0; i < this.bubbles.length; i++) {
       const b = this.bubbles[i];
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.fillStyle = 'rgba(255,255,255,0.15)';
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+      if (b.r > 2.5) {                                          // a tiny shine makes it look round
+        ctx.fillStyle = 'rgba(255,255,255,0.8)';
+        ctx.beginPath();
+        ctx.arc(b.x - b.r * 0.35, b.y - b.r * 0.35, b.r * 0.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   },
 
@@ -484,6 +727,14 @@ const Ocean = {
         Draw.heart(ctx, p.x, p.y, p.size, p.color);
       } else if (p.shape === 'star') {
         Draw.star(ctx, p.x, p.y, p.size, p.size * 0.35, 4, p.color, this.time * 3 + p.spin);
+      } else if (p.shape === 'spark') {                     // firework spark with a short tail
+        ctx.strokeStyle = p.color;
+        ctx.lineWidth = p.size;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 3, p.y - p.vy * 3);
+        ctx.stroke();
       } else {                                              // confetti: a spinning little rectangle
         ctx.save();
         ctx.translate(p.x, p.y);
@@ -494,6 +745,22 @@ const Ocean = {
       }
     }
     ctx.globalAlpha = 1;
+  },
+
+  // A dark veil with a big pause sign over the frozen ocean.
+  drawPaused() {
+    const c = this.ctx;
+    c.save();
+    c.fillStyle = 'rgba(5, 20, 35, 0.55)';
+    c.fillRect(0, 0, this.W, this.H);
+    c.fillStyle = 'rgba(232, 246, 255, 0.92)';
+    const x = this.W / 2, y = this.H / 2 - 18;
+    c.fillRect(x - 26, y - 34, 18, 68);
+    c.fillRect(x + 8, y - 34, 18, 68);
+    c.font = 'bold 28px system-ui, sans-serif';
+    c.textAlign = 'center';
+    c.fillText('Paused', x, y + 76);
+    c.restore();
   },
 
   drawBanner() {

@@ -34,6 +34,35 @@ const UI = {
     this.$('playAgainBtn').addEventListener('click', function () {
       bus.emit('ui:restart');
     });
+    this.$('pauseBtn').addEventListener('click', function () {
+      bus.emit('ui:togglePause');
+    });
+    this.$('resumeBtn').addEventListener('click', function () {
+      bus.emit('ui:togglePause');
+    });
+    // Keyboard: P or Esc pauses / resumes (but not while typing a number in the answer box).
+    document.addEventListener('keydown', function (e) {
+      const typing = e.target === self.$('answer');
+      if (e.key === 'Escape' || ((e.key === 'p' || e.key === 'P') && !typing)) {
+        if (!self.$('gamePanel').hidden) { e.preventDefault(); bus.emit('ui:togglePause'); }
+      }
+    });
+    // Switching to another tab or window pauses the game automatically.
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { bus.emit('ui:autoPause'); }
+    });
+  },
+
+  // Show or hide the paused screen and switch the button between Pause and Resume.
+  setPaused(on) {
+    const button = this.$('pauseBtn');
+    button.innerHTML = on ? '&#9654; Resume' : '&#10074;&#10074; Pause';
+    button.setAttribute('aria-pressed', on ? 'true' : 'false');
+    button.title = on ? 'Resume the game (P)' : 'Pause the game (P)';
+    this.$('pauseOverlay').hidden = !on;
+    this.$('questionBox').classList.toggle('is-paused', on);
+    if (on) { this.$('resumeBtn').focus(); }
+    else if (!this.$('answerForm').hidden && !this.$('answer').disabled) { this.$('answer').focus(); }
   },
 
   /* ---------- which part of the page is visible ---------- */
@@ -60,7 +89,13 @@ const UI = {
     this.$('hudLevel').textContent = 'Level ' + s.level + ' / ' + s.totalLevels + ' - ' + s.levelName;
     this.$('hudStep').textContent = 'Question ' + (s.step + 1) + ' of ' + s.stepsPerLevel;
     this.$('progressFill').style.width = (s.step / s.stepsPerLevel * 100) + '%';
-    this.$('hudScore').textContent = s.score;
+    const score = this.$('hudScore');
+    if (score.textContent !== String(s.score)) {
+      score.textContent = s.score;
+      score.classList.remove('bump');
+      void score.offsetWidth;                 // restart the CSS animation
+      score.classList.add('bump');
+    }
     this.$('hudMistakes').textContent = s.mistakes;
   },
 
@@ -108,6 +143,7 @@ const UI = {
       button.className = 'choice';
       button.textContent = option;
       button.addEventListener('click', function () {
+        button.classList.add('picked');       // turns red (and shakes) if it was wrong
         self.bus.emit('ui:submitAnswer', { value: index });
       });
       box.appendChild(button);
@@ -116,12 +152,11 @@ const UI = {
   },
 
   // "Feeding time" question: a picture from the Fish Game service plus a number box.
-  showFishQuestion(imageUrl, shrimpEach) {
+   showFishQuestion(imageUrl, eaten) {
     const self = this;
     const img = this.$('puzzle');
-    this.$('questionText').textContent = shrimpEach === 1
-      ? 'Feeding time! Every fish eats 1 shrimp. Count the fish - how many shrimp do you need?'
-      : 'Feeding time! Every fish eats ' + shrimpEach + ' shrimp. Count the fish - how many shrimp do you need in total?';
+        this.$('questionText').textContent =
+      'Shark attack! A hungry shark will eat ' + eaten + ' fish. Count the fish in the picture - how many fish will be left?';
     img.onload = function () {
       self.$('loadingText').hidden = true;
       img.hidden = false;
