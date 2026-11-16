@@ -136,7 +136,7 @@ CREATE TABLE email_log (
   user_id     INT UNSIGNED     NULL,           -- NULL for a code sent before the account exists
   recipient   VARCHAR(100)     NOT NULL,
   email_type  ENUM('verification', 'welcome') NOT NULL,
-  provider    ENUM('mailpit', 'brevo', 'terminal') NOT NULL,
+  provider    ENUM('mailpit', 'terminal') NOT NULL,
   sent_ok     TINYINT(1)       NOT NULL,
   error_text  VARCHAR(300)     NULL,
   created_at  DATETIME         NOT NULL DEFAULT CURRENT_TIMESTAMP,

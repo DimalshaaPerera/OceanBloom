@@ -21,7 +21,7 @@
  *
  * It uses Node's built-in modules (http, fs, path, crypto) plus one library, mysql2,
  * used only by db.js to talk to the MySQL / MariaDB database.
- * Welcome emails are sent by mailer.js (Mailpit locally, or the Brevo web API).
+ * Verification and welcome emails are sent by mailer.js to the Mailpit test inbox.
  *
  * Code origin: generated with Claude (Anthropic), then read, tested and adapted by
  * me. (Student: edit to reflect your own changes.)
@@ -130,16 +130,13 @@ function clientIp(req) {
 
 /* ---------- API handlers ---------- */
 
-// Note about the verification email for the page when it did not go to a real inbox.
+// Note for the page about where the verification code went.
 // With Mailpit the code is in the local test inbox, NOT in the player's real email -
 // without this note players wait for an email that never arrives and the account is never created.
 function codeNote(mail) {
   if (!mail.sent) { return 'Email is not set up on the server, so the code was printed in the server terminal.'; }
-  if (config.EMAIL.provider === 'mailpit') {
-    return 'Test mode: the code was sent to the local Mailpit inbox, not your real email. ' +
-           'Open ' + config.EMAIL.mailpitUrl + ' to read it, then type it below.';
-  }
-  return null;
+  return 'Test mode: the code was sent to the local Mailpit inbox, not your real email. ' +
+         'Open ' + config.EMAIL.mailpitUrl + ' to read it, then type it below.';
 }
 
 // REGISTER STEP 1: check the details, then email a 6-digit code. No account is created yet.

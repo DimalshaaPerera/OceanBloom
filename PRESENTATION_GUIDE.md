@@ -84,7 +84,7 @@ Tip: to avoid wasting demo time, rehearse so you know the easy answers. If your 
 - The Fish Game documentation page, and the JSON it returns.
 
 **Questions to answer in your own words**
-- Name every pair of systems that talk to each other (browser, your server, the Fish Game service, the Brevo email API). For each pair: which **protocol** and which **data format**? (Browser <-> your server; your server <-> the Fish Game service; your server <-> the Brevo email API: HTTPS POST with JSON and an API key.)
+- Name every pair of systems that talk to each other (browser, your server, the Fish Game service, Mailpit, the MySQL database). For each pair: which **protocol** and which **data format**? (Browser <-> your server; your server <-> the Fish Game service; your server <-> Mailpit: HTTP POST to `/api/v1/send` with JSON; your server <-> MySQL.)
 - The Fish Game service is someone else's code on another computer. What did you have to assume about it, and how do you protect your game if it is slow, down, or sends something unexpected? (Look for the timeout and the shape check.)
 - Why does your *server* call the Fish Game service instead of the browser doing it directly?
 - Why does your *server* send the email instead of the browser?
@@ -93,7 +93,8 @@ Tip: to avoid wasting demo time, rehearse so you know the easy answers. If your 
 
 **Alternatives to discuss (70%+)**
 - The browser calling the service directly (simpler, but cross-origin restrictions and nothing checks the data).
-- Sending by SMTP (a mail-server protocol, e.g. Gmail with nodemailer) instead of a REST API: which is simpler to set up, and which is easier to swap for another provider?
+- Sending by SMTP (a mail-server protocol; Mailpit also accepts SMTP on port 1025) instead of its REST API: which is simpler, and which would be easier to swap for a real email service later?
+- Mailpit is a local test inbox: what would change to send real emails to players (a cloud email service, an API key kept secret on the server, spam folders)?
 - Calling an email API straight from the browser, e.g. EmailJS (no server needed, but the keys end up visible to everyone).
 - A trivia web service for the questions (more interoperability, but no ocean category).
 - A weakness worth admitting: the correct fish count travels to the browser, so a determined player could look it up. How could a server check answers instead?

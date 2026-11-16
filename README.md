@@ -9,7 +9,7 @@ You start as a small fish in an empty, dark ocean. Answer ocean questions agains
 | --- | --- |
 | Language / platform | JavaScript: Node.js 18+ (server), HTML5 / CSS / Canvas 2D (browser) |
 | Database | MySQL / MariaDB (XAMPP) |
-| Third-party services | Fish Game API (game data), Mailpit or Brevo (email) |
+| Third-party services | Fish Game API (game data), Mailpit (local test email inbox) |
 | External library | `mysql2` (database driver), the only npm dependency |
 | Repository | https://github.com/DimalshaaPerera/OceanBloom |
 
@@ -92,12 +92,11 @@ Email: ready (sending to Mailpit at http://localhost:8025)
 
 To stop a server, press **Ctrl+C** in its terminal. Open the game at `http://localhost:3000`. Apache (`http://localhost/...`) and VS Code's "Go Live" button do not run the Node server. An internet connection is needed for the Fish Game challenge.
 
-### Email options (`EMAIL_PROVIDER` in `.env`)
+### Email (`EMAIL_PROVIDER` in `.env`)
 
 | Value | What happens |
 | --- | --- |
 | `mailpit` (default) | Emails go to the local inbox at http://localhost:8025. Nothing reaches real people, so made-up addresses work. |
-| `brevo` | Real emails through the Brevo REST API (free plan: 300 a day). Set `BREVO_API_KEY` and a verified `MAIL_FROM_ADDRESS`. |
 | empty | Registration still works; the code and the welcome email are printed in the terminal. |
 
 ---
@@ -153,10 +152,10 @@ OceanBloom is a **three-tier, client/server** application that also talks to **t
  │  security.js (passwords, sessions, cookies)  verification.js (OTP)  │
  │  store.js (all SQL) ──► db.js (connection pool)   mailer.js (email) │
  └──────┬────────────────────────────┬─────────────────────┬───────────┘
-        │ SQL (prepared statements)  │ HTTPS GET + JSON    │ HTTP(S) POST + JSON
+        │ SQL (prepared statements)  │ HTTPS GET + JSON    │ HTTP POST + JSON
         ▼                            ▼                     ▼
-   MySQL / MariaDB            Fish Game API           Mailpit / Brevo
-   (XAMPP)                    (marcconrad.com)        (email services)
+   MySQL / MariaDB            Fish Game API           Mailpit
+   (XAMPP)                    (marcconrad.com)        (test email inbox)
 ```
 
 ---
@@ -177,7 +176,7 @@ OceanBloom is a **three-tier, client/server** application that also talks to **t
 | [server/db.js](server/db.js) | The only file that connects to MySQL |
 | [server/store.js](server/store.js) | All SQL queries (data access layer) |
 | [server/security.js](server/security.js) | Passwords, sessions, cookies, lock-out |
-| [server/mailer.js](server/mailer.js) | Sending email to Mailpit or Brevo |
+| [server/mailer.js](server/mailer.js) | Sending the verification and welcome emails to Mailpit |
 | [server/config.js](server/config.js) | Reading settings and secrets from `.env` |
 
 **Low coupling:**
@@ -185,7 +184,7 @@ OceanBloom is a **three-tier, client/server** application that also talks to **t
 - [main.js](public/js/main.js) is the **only** file that knows about all the components (a mediator/controller). Any one component can be replaced without editing the others.
 - The rules in `game.js` have no dependency on the DOM, so they can be **unit tested in Node** without a browser ([tests/game.test.js](tests/game.test.js)). This is the practical benefit of low coupling.
 - On the server, `server.js` never writes SQL itself; it asks `store.js`. Switching from the old JSON file to MySQL changed `store.js` and `db.js` and left the rest of the code untouched.
-- Swapping Mailpit for Brevo is a **configuration change** (`EMAIL_PROVIDER`), not a code change.
+- Email delivery is isolated in `mailer.js`: moving from Mailpit to a real email service later would mean changing only that file (and `.env`), not the rest of the server.
 
 **Alternatives that could be discussed:** a framework such as React or Express (more structure, more dependencies); classes or ES modules instead of object literals; calling components directly instead of through events (simpler, but tightly coupled); an ORM instead of hand-written SQL.
 
@@ -228,7 +227,6 @@ OceanBloom works together with code **written by other people, in other language
 | Our server → **Fish Game API** (third party, PHP, marcconrad.com) | **HTTPS GET**, JSON response `{ "question": "<image URL>", "fish": 2, "chest": 7 }` | `fish()` in [server.js](server/server.js) |
 | Browser → Fish Game image host | HTTPS image (PNG) | [ui.js](public/js/ui.js) `showFishQuestion` |
 | Our server → **Mailpit** (Go program) | HTTP **POST** `/api/v1/send`, JSON | [mailer.js](server/mailer.js) |
-| Our server → **Brevo** (cloud email service) | HTTPS **POST** `/v3/smtp/email`, JSON, `api-key` header | [mailer.js](server/mailer.js) |
 | Our server → **MySQL/MariaDB** | MySQL protocol through the `mysql2` driver, SQL with `?` placeholders | [db.js](server/db.js), [store.js](server/store.js) |
 
 **Design decisions:**
@@ -254,7 +252,7 @@ Virtual identity is how the application knows **who a player is** and keeps that
 | **Brute-force protection** | 5 wrong passwords (same IP + username) lock the login for 30 seconds. The error message is the same for "no such user" and "wrong password" (and a dummy hash keeps the timing equal), so attackers cannot discover which usernames exist. | [security.js](server/security.js), [server.js](server/server.js) |
 | **Authorisation** | `game.html`, `dashboard.html` and `leaderboard.html` are only served to logged-in players (a server-side page guard); the API returns `401` otherwise. | [server.js](server/server.js), [nav.js](public/js/nav.js) |
 | **Server-side checks** | Progress reports are validated: the level must be 1 to 6 and the score a whole number no higher than 1000 (the real maximum is 968), so a player cannot post a fake score by calling the API directly. | [server.js](server/server.js) |
-| **Secrets** | API keys and the database password live in `.env`, which git ignores. They are never in the code. | [config.js](server/config.js), [.gitignore](.gitignore) |
+| **Secrets** | Settings such as the database password live in `.env`, which git ignores. They are never in the code. | [config.js](server/config.js), [.gitignore](.gitignore) |
 
 **Alternatives that could be discussed:** JWT tokens instead of server sessions; bcrypt or Argon2 instead of scrypt; OAuth / "Sign in with Google"; two-factor authentication on every login; magic-link (passwordless) login; HTTPS with the `Secure` flag in production.
 
@@ -344,7 +342,7 @@ oceanbloom/
 │   ├── server.js           HTTP server, REST API, page guard, Fish Game proxy
 │   ├── security.js         scrypt passwords, sessions, cookies, lock-out
 │   ├── verification.js     email one-time codes
-│   ├── mailer.js           Mailpit / Brevo email
+│   ├── mailer.js           sends email to Mailpit
 │   ├── store.js            all SQL (data access)
 │   ├── db.js               MySQL connection pool
 │   └── config.js           reads .env
@@ -379,7 +377,6 @@ Not committed (see `.gitignore`): `.env`, `node_modules/`, `data/`, `tools/` (th
 ### External services and software
 
 - **Fish Game API**, Marc Conrad, University of Bedfordshire: https://marcconrad.com/uob/fish/doc.php (HTTPS GET, JSON)
-- **Brevo** transactional email API: https://developers.brevo.com/reference/sendtransacemail
 - **Mailpit** (local email testing), Ralph Slooten: https://mailpit.axllent.org. Send API: https://mailpit.axllent.org/docs/api-v1/
 - **mysql2** Node.js driver: https://github.com/sidorares/node-mysql2
 - **MySQL / MariaDB** via **XAMPP** (Apache Friends): https://www.apachefriends.org
@@ -414,4 +411,4 @@ The video is recorded in my own voice without generative AI, as the brief requir
 | Page will not open | Is `npm.cmd start` running? Use `http://localhost:3000`, not `https://`, Apache or port 5500 |
 | A button does nothing after an update | Hard refresh with **Ctrl+F5** to load the newest JavaScript |
 | The Shark attack picture will not load | Check your internet connection; the terminal prints the reason |
-| No email arrives | Is `npm.cmd run mailpit` running? Check http://localhost:8025. With Brevo, HTTP 401 means a wrong API key; also check the spam folder. |
+| No email arrives | Is `npm.cmd run mailpit` running? Check http://localhost:8025. The server terminal prints the reason for any failed email. |

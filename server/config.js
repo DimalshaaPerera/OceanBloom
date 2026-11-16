@@ -46,15 +46,12 @@ module.exports = {
     password: env.DB_PASSWORD || '',
     database: (env.DB_NAME || 'oceanbloom').trim()
   },
-  // Email. EMAIL_PROVIDER chooses where welcome emails go:
-  //   mailpit - local test inbox (http://localhost:8025); nothing leaves your computer
-  //   brevo   - real emails through the Brevo web API (needs BREVO_API_KEY)
-  //   empty   - Brevo if BREVO_API_KEY is set, otherwise emails are printed in the terminal
+  // Email. EMAIL_PROVIDER chooses where verification and welcome emails go:
+  //   mailpit - the Mailpit test inbox (http://localhost:8025); nothing leaves your computer
+  //   empty   - emails are printed in the terminal instead
   EMAIL: {
-    provider: (env.EMAIL_PROVIDER || (env.BREVO_API_KEY ? 'brevo' : '')).trim().toLowerCase(),
+    provider: (env.EMAIL_PROVIDER || '').trim().toLowerCase(),
     mailpitUrl: (env.MAILPIT_URL || 'http://localhost:8025').trim().replace(/\/+$/, ''),
-    apiUrl: env.EMAIL_API_URL || 'https://api.brevo.com/v3/smtp/email',
-    apiKey: (env.BREVO_API_KEY || '').trim(),
     fromAddress: (env.MAIL_FROM_ADDRESS || '').trim(),
     fromName: (env.MAIL_FROM_NAME || 'OceanBloom').trim()
   }
