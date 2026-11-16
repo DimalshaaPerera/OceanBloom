@@ -38,7 +38,7 @@ You start as a small fish in an empty, dark ocean. Answer ocean questions agains
 
 | Requirement from the assignment brief | Where it is met |
 | --- | --- |
-| A game that uses the **Fish Game API** (https://marcconrad.com/uob/fish/doc.php) | The "Feeding time" challenge at the end of every level: [server/server.js](server/server.js) (`GET /api/fish`) and [public/js/api.js](public/js/api.js) |
+| A game that uses the **Fish Game API** (https://marcconrad.com/uob/fish/doc.php) | The "Shark attack" challenge at the end of every level: [server/server.js](server/server.js) (`GET /api/fish`) and [public/js/api.js](public/js/api.js) |
 | Code complex enough for a meaningful video on the four themes | Several separate components, a client/server split, a database, two external web services and a full login system (sections 4 to 8) |
 | **Software design principles** (low coupling, high cohesion) | Section 5 |
 | **Event-driven programming** | Section 6 |
@@ -46,7 +46,7 @@ You start as a small fish in an empty, dark ocean. Answer ocean questions agains
 | **Virtual identity** (passwords, cookies, authentication) | Section 8 |
 | Full source code of a working implementation | This repository |
 | Code from others (websites, LLMs) referenced in the source code | A "Code origin" comment at the top of every source file, plus section 13 |
-| Evidence of testing / integration of external software | Section 11 (38 automatic checks plus a manual test list) |
+| Evidence of testing / integration of external software | Section 11 (42 automatic checks plus a manual test list) |
 | Video (max 10 minutes, own voice, starts with a demo) | Recorded separately by the student. [PRESENTATION_GUIDE.md](PRESENTATION_GUIDE.md) lists *where to look* in the code, not a script. |
 
 ---
@@ -108,7 +108,7 @@ To stop a server, press **Ctrl+C** in its terminal. Open the game at `http://loc
 2. **Log in.** You land on the **Dashboard** (level, best score, rank, recent games).
 3. **Play.** There are 6 levels with 3 questions each:
    - 2 **ocean quiz** questions (multiple choice, from [public/js/questions.js](public/js/questions.js)), then
-   - 1 **Feeding time** challenge from the **Fish Game API**: a picture of fish and a treasure chest. A shark will eat 1 to 3 fish, and you type **how many fish are left**.
+   - 1 **Shark attack** challenge from the **Fish Game API**: a picture of fish and a treasure chest. A shark will eat 1 to 3 fish, and you type **how many fish are left**.
 4. Every question has a **countdown**. Quiz difficulty rises (easy, then medium, then hard) and the time limit gets shorter.
 5. You must answer **all 3 questions of a level correctly in a row**. A wrong answer or a time-out means you are **stuck**: you go back to question 1 of that level and lose that attempt's points, plus a 5-point penalty.
 6. **Score:** 10 × level for each correct answer, plus 1 point per second left (the maximum possible is 968). Results go to the **Leaderboard**.
@@ -233,8 +233,8 @@ OceanBloom works together with code **written by other people, in other language
 
 **Design decisions:**
 - **The server acts as a proxy for the Fish Game API.** The browser calls `/api/fish` on our own server, which then calls the Fish Game service. This avoids browser cross-origin (CORS) problems, keeps the API in one place, and lets us **validate the response** (checking that `question` is a URL and `fish` is a whole number ≥ 0) before trusting it.
-- **Defensive integration:** a 10-second timeout (`AbortController`), friendly error messages and a "Try again" button cover the case where the external service is slow or offline.
-- **Our own twist on the data:** the API supplies the fish count, and the game subtracts the 1 to 3 fish the shark eats. That turns the third-party data into a new puzzle.
+- **Defensive integration:** the external service is sometimes slow, so the server **retries up to 3 times** (6-second limit each, with a short wait between attempts) before reporting an error. The browser has its own 25-second limit (`AbortController`), and if every attempt fails the player sees a friendly message and a "Try again" button.
+- **Our own rule on top of the data:** the API only supplies the picture and the fish count. `GameRules.sharkAttack()` in [game.js](public/js/game.js) then has a shark eat 1 to 3 of those fish (never more than there are), and the player must answer how many are **left**. The third-party data becomes a new puzzle, and because the rule sits in the rules module it has its own automatic tests.
 
 **Alternatives that could be discussed:** calling the API straight from the browser (simpler, but exposed to CORS and unvalidated data); SOAP/XML or GraphQL instead of REST/JSON; SMTP instead of an HTTP email API; caching API responses.
 
@@ -305,7 +305,7 @@ If you have accounts from the older JSON-file version (`data/users.json`), run `
 npm.cmd test
 ```
 
-This runs **38 checks** in [tests/game.test.js](tests/game.test.js) covering the game rules (scoring, "stuck" logic, levels, the maximum score), the question bank and the credential rules. It needs no browser, which is possible only because `game.js` is decoupled from the screen.
+This runs **42 checks** in [tests/game.test.js](tests/game.test.js) covering the game rules (scoring, "stuck" logic, levels, the maximum score, the Shark attack rule), the question bank and the credential rules. It needs no browser, which is possible only because `game.js` is decoupled from the screen.
 
 ### Manual test checklist (screenshot each one as evidence)
 
@@ -322,7 +322,7 @@ This runs **38 checks** in [tests/game.test.js](tests/game.test.js) covering the
 | 9 | Pass a level | The fish grows and changes colour, new creatures appear, a banner shows |
 | 10 | Answer wrongly / let the time run out | Correct answer shown, fish shakes, back to question 1 of the level |
 | 11 | Press Pause (or P) | Clock stops, question hidden, ocean frozen; Resume continues with the same time |
-| 12 | Disconnect Wi-Fi during a Feeding time question | Friendly error and a "Try again" button |
+| 12 | Disconnect Wi-Fi during a Shark attack question | Friendly error and a "Try again" button |
 | 13 | Dashboard / Leaderboard | Level, best score, rank and all players shown |
 | 14 | Browser DevTools → Application → Cookies | `oceanbloom_session` is `HttpOnly` and `SameSite=Strict` |
 | 15 | phpMyAdmin → `users` table | Only salts and hashes, never plain-text passwords |
@@ -367,7 +367,7 @@ oceanbloom/
 │       ├── nav.js          shared menu and login check
 │       ├── loginPage.js  dashboardPage.js  leaderboardPage.js
 └── tests/
-    └── game.test.js        38 automatic checks
+    └── game.test.js        42 automatic checks
 ```
 
 Not committed (see `.gitignore`): `.env`, `node_modules/`, `data/`, `tools/` (the Mailpit program).
@@ -413,5 +413,5 @@ The video is recorded in my own voice without generative AI, as the brief requir
 | `EADDRINUSE` | A server is already running: press Ctrl+C in that terminal |
 | Page will not open | Is `npm.cmd start` running? Use `http://localhost:3000`, not `https://`, Apache or port 5500 |
 | A button does nothing after an update | Hard refresh with **Ctrl+F5** to load the newest JavaScript |
-| Feeding time will not load | Check your internet connection; the terminal prints the reason |
+| The Shark attack picture will not load | Check your internet connection; the terminal prints the reason |
 | No email arrives | Is `npm.cmd run mailpit` running? Check http://localhost:8025. With Brevo, HTTP 401 means a wrong API key; also check the spam folder. |

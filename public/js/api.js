@@ -20,7 +20,7 @@
  */
 const FishApi = {
   URL: '/api/fish',
-  TIMEOUT_MS: 10000,
+  TIMEOUT_MS: 25000,   // longer than the server's 3 attempts (about 20 s at most)
 
   async fetchQuestion() {
     const controller = new AbortController();

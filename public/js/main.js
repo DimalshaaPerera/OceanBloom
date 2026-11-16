@@ -71,12 +71,11 @@
       FishApi.fetchQuestion()
         .then(function (q) {
           if (myRequest !== requestId) { return; }          // outdated, ignore
-                   // OUR twist: a shark eats some fish - how many are left?
-          const eaten = Math.min(q.answer, 1 + Math.floor(Math.random() * 3));   // 1 to 3 fish
-          const left = q.answer - eaten;
-          question = { type: 'fish', answer: left };
-          game.setQuestion(left);
-          UI.showFishQuestion(q.imageUrl, eaten);
+          // OUR rule (in game.js): a shark eats 1-3 of the fish - how many are left?
+          const attack = GameRules.sharkAttack(q.answer);
+          question = { type: 'fish', answer: attack.left };
+          game.setQuestion(attack.left);
+          UI.showFishQuestion(q.imageUrl, attack.eaten);
           Ocean.sharkPass();                                 // the shark swims through the reef
           Sound.play('shark');
         })

@@ -9,7 +9,9 @@
  *
  * THE RULES
  *  - There are 6 levels. Each level has 3 questions: 2 ocean quiz questions and
- *    then 1 "Feeding time" challenge (count the fish in a picture from the Fish Game API, then work out how much shrimp they need).
+ *    then 1 "Shark attack" challenge: the Fish Game API gives a picture of fish
+ *    and how many there are; a shark eats 1 to 3 of them (sharkAttack below), and
+ *    the player must say how many fish are LEFT.
  *  - Levels get harder: quiz difficulty goes easy -> medium -> hard and the time
  *    limit gets shorter.
  *  - You must answer ALL 3 questions of a level correctly IN A ROW.
@@ -25,18 +27,30 @@
 const GameRules = {
   CONFIG: {
     totalLevels: 6,
-    stepsPerLevel: 3,       // 2 quiz questions + 1 'Feeding time' question
+    stepsPerLevel: 3,       // 2 quiz questions + 1 'Shark attack' question
     pointsPerLevel: 10,
     wrongPenalty: 5,
-    levels: [               // name, difficulty and seconds allowed, per level
-      // shrimpEach = shrimp every fish eats in the "Feeding time" challenge (more = harder sum)
-      { name: 'Lonely Water',     difficulty: 'easy',   quizTime: 20, fishTime: 30, shrimpEach: 1 },
-      { name: 'Bubble Bay',       difficulty: 'easy',   quizTime: 15, fishTime: 30, shrimpEach: 1 },
-      { name: 'Kelp Garden',      difficulty: 'medium', quizTime: 18, fishTime: 30, shrimpEach: 2 },
-      { name: 'Coral Courtyard',  difficulty: 'medium', quizTime: 14, fishTime: 30, shrimpEach: 2 },
-      { name: 'Reef Parade',      difficulty: 'hard',   quizTime: 15, fishTime: 30, shrimpEach: 3 },
-      { name: 'Treasure Lagoon',  difficulty: 'hard',   quizTime: 12, fishTime: 30, shrimpEach: 3 }
+    sharkMinEat: 1,         // the shark eats 1 to 3 fish in the 'Shark attack' question
+    sharkMaxEat: 3,
+    levels: [               // name, quiz difficulty and seconds allowed, per level
+      { name: 'Lonely Water',     difficulty: 'easy',   quizTime: 20, fishTime: 30 },
+      { name: 'Bubble Bay',       difficulty: 'easy',   quizTime: 15, fishTime: 30 },
+      { name: 'Kelp Garden',      difficulty: 'medium', quizTime: 18, fishTime: 30 },
+      { name: 'Coral Courtyard',  difficulty: 'medium', quizTime: 14, fishTime: 30 },
+      { name: 'Reef Parade',      difficulty: 'hard',   quizTime: 15, fishTime: 30 },
+      { name: 'Treasure Lagoon',  difficulty: 'hard',   quizTime: 12, fishTime: 30 }
     ]
+  },
+
+  // OUR rule on top of the Fish Game API: the API only says how many fish are in
+  // the picture; a shark then eats some of them, and the answer is how many are left.
+  // The shark can never eat more fish than there are. `random` can be passed in by
+  // the tests so the result is predictable; the game uses Math.random.
+  sharkAttack(fishCount, random) {
+    const roll = (random || Math.random)();
+    const span = this.CONFIG.sharkMaxEat - this.CONFIG.sharkMinEat + 1;
+    const eaten = Math.min(fishCount, this.CONFIG.sharkMinEat + Math.floor(roll * span));
+    return { eaten: eaten, left: fishCount - eaten };
   },
 
   create(bus) {
@@ -70,8 +84,7 @@ const GameRules = {
       return {
         type: isFish ? 'fish' : 'choice',
         difficulty: lv.difficulty,
-        timeLimit: isFish ? lv.fishTime : lv.quizTime,
-        shrimpEach: lv.shrimpEach
+        timeLimit: isFish ? lv.fishTime : lv.quizTime
       };
     }
 

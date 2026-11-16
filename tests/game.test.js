@@ -90,8 +90,24 @@ const spec1 = game.nextSpec();
 for (let i = 0; i < 12; i++) { game.setQuestion(0); game.submit('0', 0); }      // pass levels 1-4
 for (let i = 0; i < 1; i++) { game.setQuestion(0); game.submit('0', 0); }
 const spec5 = game.nextSpec();
-check('shrimp sum gets harder: 1 each on level 1, 3 each on level 5', spec1.shrimpEach === 1 && spec5.shrimpEach === 3);
 check('level 1 is easy and level 5 is hard', spec1.difficulty === 'easy' && spec5.difficulty === 'hard');
+
+// the "Shark attack" question: our own rule on top of the Fish Game API's fish count
+game.reset();
+game.setQuestion(0); game.submit('0', 0);
+game.setQuestion(0); game.submit('0', 0);
+check('the 3rd question of a level is the Shark attack (Fish Game API) question', game.nextSpec().type === 'fish');
+const shark = lib.GameRules.sharkAttack;
+check('shark eats at least 1 fish (lowest roll)', JSON.stringify(shark.call(lib.GameRules, 8, function () { return 0; })) === '{"eaten":1,"left":7}');
+check('shark eats at most 3 fish (highest roll)', JSON.stringify(shark.call(lib.GameRules, 8, function () { return 0.999; })) === '{"eaten":3,"left":5}');
+check('shark never eats more fish than there are', JSON.stringify(shark.call(lib.GameRules, 2, function () { return 0.999; })) === '{"eaten":2,"left":0}');
+let sharkOk = true;
+for (let n = 0; n < 500; n++) {
+  const fishCount = n % 12;
+  const r = lib.GameRules.sharkAttack(fishCount);
+  if (r.eaten + r.left !== fishCount || r.left < 0 || r.eaten > 3 || (fishCount > 0 && r.eaten < 1)) { sharkOk = false; }
+}
+check('500 random shark attacks: eaten + left = fish in picture, 1 to 3 eaten', sharkOk);
 
 /* ---------------- question bank ---------------- */
 

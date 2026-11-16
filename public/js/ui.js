@@ -151,11 +151,11 @@ const UI = {
     this.bus.emit('ui:questionShown');     // the countdown starts now
   },
 
-  // "Feeding time" question: a picture from the Fish Game service plus a number box.
-   showFishQuestion(imageUrl, eaten) {
+  // "Shark attack" question: a picture from the Fish Game service plus a number box.
+  showFishQuestion(imageUrl, eaten) {
     const self = this;
     const img = this.$('puzzle');
-        this.$('questionText').textContent =
+    this.$('questionText').textContent =
       'Shark attack! A hungry shark will eat ' + eaten + ' fish. Count the fish in the picture - how many fish will be left?';
     img.onload = function () {
       self.$('loadingText').hidden = true;

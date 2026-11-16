@@ -301,25 +301,40 @@ async function leaderboard(ctx) {
 }
 
 // INTEROPERABILITY: our server calls the Fish Game web service (HTTP GET, JSON).
-async function fish(ctx) {
-  try {
-    const response = await fetch(config.FISH_API_URL, {
-      signal: AbortSignal.timeout(8000),
-      headers: { Accept: 'application/json' }
-    });
-    if (!response.ok) { throw new Error('Fish Game service answered HTTP ' + response.status); }
-    const data = await response.json();
+// The service runs on someone else's server, so it is sometimes slow. One slow
+// answer should not stop the game: we try up to FISH_ATTEMPTS times, each with
+// its own time limit, and only report an error if every attempt fails.
+const FISH_ATTEMPTS = 3;
+const FISH_TIMEOUT_MS = 6000;
 
-    // Never trust data from another system blindly: check its shape.
-    if (typeof data.question !== 'string' || !/^https?:\/\//.test(data.question) ||
-        !Number.isInteger(data.fish) || data.fish < 0) {
-      throw new Error('Unexpected response from the Fish Game service');
-    }
-    sendJson(ctx.res, 200, { imageUrl: data.question, answer: data.fish });
-  } catch (error) {
-    console.error('Fish Game service problem: ' + error.message);
-    throw httpError(502, 'The Fish Game service is not available right now.');
+async function askFishService() {
+  const response = await fetch(config.FISH_API_URL, {
+    signal: AbortSignal.timeout(FISH_TIMEOUT_MS),
+    headers: { Accept: 'application/json' }
+  });
+  if (!response.ok) { throw new Error('Fish Game service answered HTTP ' + response.status); }
+  const data = await response.json();
+
+  // Never trust data from another system blindly: check its shape.
+  if (typeof data.question !== 'string' || !/^https?:\/\//.test(data.question) ||
+      !Number.isInteger(data.fish) || data.fish < 0) {
+    throw new Error('Unexpected response from the Fish Game service');
   }
+  return data;
+}
+
+async function fish(ctx) {
+  for (let attempt = 1; attempt <= FISH_ATTEMPTS; attempt++) {
+    try {
+      const data = await askFishService();
+      sendJson(ctx.res, 200, { imageUrl: data.question, answer: data.fish });
+      return;
+    } catch (error) {
+      console.error('Fish Game service problem (attempt ' + attempt + ' of ' + FISH_ATTEMPTS + '): ' + error.message);
+      if (attempt < FISH_ATTEMPTS) { await new Promise(function (r) { setTimeout(r, 500 * attempt); }); }
+    }
+  }
+  throw httpError(502, 'The Fish Game service is not available right now.');
 }
 
 // method + path -> { handler, needs a logged-in user?, reads a JSON body? }

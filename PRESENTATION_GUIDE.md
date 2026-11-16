@@ -88,7 +88,7 @@ Tip: to avoid wasting demo time, rehearse so you know the easy answers. If your 
 - The Fish Game service is someone else's code on another computer. What did you have to assume about it, and how do you protect your game if it is slow, down, or sends something unexpected? (Look for the timeout and the shape check.)
 - Why does your *server* call the Fish Game service instead of the browser doing it directly?
 - Why does your *server* send the email instead of the browser?
-- The Fish Game service only supplies a picture and the number of fish. Which part of the "Feeding time" question (the shrimp multiplication) is YOUR logic, and where in the code does it happen (`main.js`, `game.js` `shrimpEach`)? Why is it good that you add your own rules on top of someone else's service?
+- The Fish Game service only supplies a picture and the number of fish. Which part of the "Shark attack" question (the shark eating 1 to 3 fish, so the answer is how many are left) is YOUR logic, and where in the code does it happen (`game.js` `sharkAttack`, called from `main.js`)? Why is it good that you add your own rules on top of someone else's service?
 - Your own quiz questions are a local list, not a web service. Why?
 
 **Alternatives to discuss (70%+)**
